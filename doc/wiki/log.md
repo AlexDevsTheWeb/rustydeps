@@ -55,3 +55,18 @@ Validation: `cargo fmt --check` clean; `cargo clippy --all-targets -- -D
 warnings` clean; `cargo test` 6 passed; OKF validator PASSED (0 errors, 0
 warnings).
 
+## 2026-10-14 — HTML report UI specification added
+
+Documented the finalized HTML report design produced by the Stitch UI iterations
+(`doc/raw/stitch/`):
+
+- Added [[html-report-spec]] — industrial dark mode, Zinc palette, project-centric
+  component hierarchy, minimalist 6px risk dots, discrete grey `AI` tag, inline
+  dependency drawer, filter/search bar, empty state, and "Update All".
+- Linked it from [[index]] (knowledge map) and from the report-generator section
+  of [[architecture]].
+- This entry.
+
+Validation: OKF validator PASSED (0 errors, 0 warnings).
+
+
