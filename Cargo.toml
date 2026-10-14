@@ -1,0 +1,24 @@
+[package]
+name = "rustydeps"
+version = "0.1.0"
+edition = "2021"
+description = "Fast, cross-platform CLI that scans local repositories for dependency manifests and reports available upgrades."
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/AlexDevsTheWeb/rustydeps"
+readme = "README.md"
+keywords = ["dependencies", "semver", "cli", "scanner"]
+categories = ["command-line-utilities", "development-tools"]
+
+[dependencies]
+clap = { version = "4.4", features = ["derive", "env"] }
+ignore = "0.4"
+tokio = { version = "1.35", features = ["full"] }
+anyhow = "1.0"
+thiserror = "1.0"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+[dev-dependencies]
+tempfile = "3"
