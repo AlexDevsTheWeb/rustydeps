@@ -1,0 +1,17 @@
+# Rust build artifacts
+/target/
+**/*.rs.bk
+
+# Local agent/tool scratch space (work journals, etc.) — never committed
+/tmp/
+
+# Generated reports and local HTML output
+/reports/
+*.html
+!doc/**/*.html
+
+# Editor / OS noise
+.DS_Store
+.idea/
+.vscode/
+*.swp
