@@ -31,3 +31,27 @@ Created the initial OKF wiki during the scaffolding task
 Also created `doc/raw/rustydeps-spec.md` (core specification) and rewrote
 `AGENTS.md` / `CLAUDE.md` for the Rust stack, removing the legacy
 React/TypeScript/Vite references.
+
+## 2026-10-14 — Phase 1: Rust crate, CLI, and scanner
+
+Implemented Phase 1 (`doc/raw/2026-10-14-phase-1/2026-10-14-phase-1.md`):
+
+- Initialized the binary crate (`Cargo.toml`, edition 2021) with `clap`,
+  `ignore`, `tokio`, `anyhow`, `thiserror`, `serde`/`serde_json`, `tracing`, and
+  `tracing-subscriber`; `tempfile` as a dev-dependency.
+- `src/cli.rs` — `Cli`, the `scan` subcommand (`path`, `--ai`, `--output`/`-o`,
+  `--format html|json`, `--verbose`/`-v`), built with `clap` derive.
+- `src/main.rs` — `#[tokio::main]` entrypoint; `tracing-subscriber` to stderr;
+  dispatch to the scanner and print results.
+- `src/scanner.rs` — `ManifestType`, `DiscoveredManifest`, and
+  `scan_directory` over `ignore::WalkBuilder` (gitignore/ignore/hidden rules,
+  `node_modules`/`target`/`.git` pruned); six unit tests.
+- Added `LICENSE-MIT` and `LICENSE-APACHE`; removed the unrelated
+  `.claude/skills/stitch-to-mui` skill.
+- Updated [[architecture]] (implemented CLI/scanner modules) and [[roadmap]]
+  (Phase 1 marked done). This entry.
+
+Validation: `cargo fmt --check` clean; `cargo clippy --all-targets -- -D
+warnings` clean; `cargo test` 6 passed; OKF validator PASSED (0 errors, 0
+warnings).
+

@@ -31,17 +31,42 @@ CLI (clap)
 
 ## Modules
 
-### CLI (`src/main.rs`)
+> Status: the CLI and filesystem walk below are implemented (Phase 1). The
+> parser, registry, classification, report, and AI modules remain planned.
 
-Entrypoint built with `clap` (derive pattern). Parses scan roots, the report
-output path, a concurrency knob, and the `--ai` flag. Handlers return
-`anyhow::Result`; argument validation happens here, not in the modules.
+### CLI (`src/cli.rs`, `src/main.rs`)
 
-### Filesystem walk
+Built with `clap` (derive pattern). The `scan` subcommand takes a root `path`
+(default `.`), `--ai`, `--output`/`-o` (default `report.html`), `--format
+html|json`, and `--verbose`/`-v`. `main` is `#[tokio::main]` and returns
+`anyhow::Result`; it initializes `tracing-subscriber` (logs go to stderr so
+stdout stays clean for `--format json`) and dispatches the subcommand. *Implemented
+in Phase 1; `--output`/`--ai` are accepted but not yet wired to a report engine.*
 
-Uses the `ignore` crate so `.gitignore`/`.ignore` rules are respected
-automatically. Collects manifest paths concurrently; never hand-rolls a
-recursive directory walk.
+### Filesystem walk (`src/scanner.rs`)
+
+Uses `ignore::WalkBuilder` so `.gitignore`, `.ignore`, and `.git/info/exclude`
+rules are honoured and hidden entries are skipped. `require_git(false)` makes
+ignore files apply even when the root is not a git repository, and the
+`node_modules`, `target`, and `.git` directories are pruned explicitly.
+`scan_directory` returns a path-sorted `Vec<DiscoveredManifest>`. *Implemented in
+Phase 1.*
+
+```rust
+pub enum ManifestType {
+    CargoToml,      // Cargo.toml
+    PackageJson,    // package.json
+    GoMod,          // go.mod
+    RequirementsTxt,// requirements.txt
+    PyprojectToml,  // pyproject.toml
+    ComposerJson,   // composer.json
+}
+
+pub struct DiscoveredManifest {
+    pub path: PathBuf,
+    pub manifest_type: ManifestType,
+}
+```
 
 ### Parser trait (`src/parser/`)
 

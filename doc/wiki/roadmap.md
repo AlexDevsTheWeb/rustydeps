@@ -13,26 +13,28 @@ tags: [roadmap, phases, planning]
 # Roadmap
 
 RustyDeps ships in six incremental phases. Each phase leaves the tool in a
-usable state and maps to modules described in [[architecture]]. Status is
-tracked here; only Phase 1 is being entered (scaffolding is complete, the crate
-itself is next).
+usable state and maps to modules described in [[architecture]]. Phase 1 is
+complete; Phase 2 is next.
 
 ## Phase status
 
 | # | Phase | Status |
 |---|-------|--------|
-| 1 | Rust Setup & CLI (`clap` + `ignore`) | Next |
-| 2 | Parsers (Cargo & npm) & Registry HTTP Clients | Planned |
+| 1 | Rust Setup & CLI (`clap` + `ignore`) | ✅ Done |
+| 2 | Parsers (Cargo & npm) & Registry HTTP Clients | Next |
 | 3 | Unified DTO & SemVer Logic | Planned |
 | 4 | Interactive HTML Report Engine | Planned |
 | 5 | AI Changelog Summarizer Module | Planned |
 | 6 | Multi-ecosystem Expansion (PyPI, Go, Composer) | Planned |
 
-## Phase 1 — Rust Setup & CLI
+## Phase 1 — Rust Setup & CLI ✅
 
-Initialize the crate, wire `clap` (derive) for arguments, and implement the
-`ignore`-based filesystem walk that discovers manifests. Exit criteria: the CLI
-runs, accepts roots, and lists discovered manifest paths.
+Crate initialized (edition 2021) with `clap` (derive) and the `ignore`-based
+scanner. The `scan` subcommand walks a root, honours ignore rules, and lists
+every supported manifest as text or JSON. Dual licensing (MIT/Apache-2.0) added.
+Exit criteria met: the CLI runs, accepts roots, and lists discovered manifest
+paths. See [[architecture]] and `doc/raw/development-report-*`.
+
 
 ## Phase 2 — Parsers & Registry Clients
 
