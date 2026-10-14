@@ -105,6 +105,10 @@ Renders a single self-contained, interactive HTML file from the in-memory
 result set — filter and sort by ecosystem, severity, and repository. Requires no
 network access to view and opens straight from disk.
 
+The template design (palette, project-centric component hierarchy, risk
+indicators, inline drawer, filter/search, empty state) is fixed by
+[[html-report-spec]]; treat that page as the report generator's design contract.
+
 ### AI module (`src/ai/`)
 
 Optional and flag-gated. Given a dependency and its version jump, fetches the

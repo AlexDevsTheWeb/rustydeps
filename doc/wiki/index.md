@@ -25,6 +25,7 @@ and produces an interactive HTML report with optional AI changelog summaries.
 | Page | What it covers |
 |------|----------------|
 | [[architecture]] | System and module design, the `PackageParser` trait, registry clients, report engine, AI module, and core DTOs. |
+| [[html-report-spec]] | Finalized UX/UI contract for the interactive HTML report: industrial dark mode, project-centric grouping, risk indicators, and interactions. |
 | [[roadmap]] | The six delivery phases from Rust setup to multi-ecosystem expansion. |
 | [[okf-compliance]] | Open formats, open licensing, metadata traceability, and how to validate this wiki. |
 | [[log]] | Append-only history of wiki changes. |
