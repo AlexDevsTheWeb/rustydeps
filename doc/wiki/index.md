@@ -41,7 +41,7 @@ and produces an interactive HTML report with optional AI changelog summaries.
 - `doc/raw/rustydeps-spec.md` — core architectural requirements.
 - `doc/raw/2026-10-14-scaffolding/2026-10-14-scaffolding.md` — the scaffolding
   task that created this wiki.
-- `doc/raw/2026-10-15-phase-2/2026-10-15-phase2.md` — the Phase 2 brief
+- `doc/raw/2026-10-15/2026-10-15-phase2.md` — the Phase 2 brief
   implemented by [[phase-2-parsers-registry]].
 
 ## Conventions
