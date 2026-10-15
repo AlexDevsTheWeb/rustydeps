@@ -358,4 +358,43 @@ immutable).
 Validation: workflow YAML parses and both `run:` blocks still pass `bash -n`;
 OKF validator PASSED (0 errors, 0 warnings).
 
+## 2026-10-15 — Docker image verified in CI; two defects found and fixed
+
+The PR's Docker workflow was exercised end to end, which caught two defects that
+would otherwise have shipped a non-functional image:
+
+1. **Run 38800896598 (failed) — the stub binary shipped as `rustydeps`.** The
+   strengthened smoke test reported an empty `--version`. The build log showed
+   `[builder 8/8] RUN cargo build --release --locked` finishing in 0.14 s with no
+   recompile: cargo's mtime freshness check treats the in-image stub
+   `src/main.rs` as newer than the sources `COPY` preserves, so the real crate
+   was never built and `fn main() {}` was copied into the runtime stage.
+2. **Run 38801611324 (failed) — `ld: cannot find -lssl`.** With the crate
+   finally compiling, the link failed because `x86_64-unknown-linux-musl` links
+   statically by default (`crt-static`) and therefore needs `libssl.a`. The stub
+   had hidden this: unused crates are not linked.
+
+Fixes: `touch src/main.rs` plus a build-time
+`./target/release/rustydeps --version | grep -q '^rustydeps '` assertion;
+`openssl-libs-static` added to the builder (Alpine builds OpenSSL with `no-zlib`,
+per aports `main/openssl/APKBUILD`, so no `-lz`); the runtime stage reduced to
+`ca-certificates` because the static binary carries libc, libgcc and OpenSSL
+internally. The smoke test was also rewritten to assert on container output
+rather than trust a green step.
+
+The mtime-skip mechanism was reproduced locally in a scratch crate. Files
+changed: `Dockerfile`, `.github/workflows/docker.yml`, `.dockerignore`,
+[[docker-image]] (components, decisions, verification), its implementation
+report, and `doc/raw/2026-10-15/2026-10-15-issue15-docker.md`.
+
+**Run 38801998432 (PR #16) is green**: the build compiles the crate and passes
+its assertion, and the smoke test reports `container reports: rustydeps 0.1.0`
+and `report written through the mount: 65482 bytes` (report asserted non-empty
+HTML). Unverified: the `linux/arm64` leg and a real GHCR push, which only run on
+`main`/tag events.
+
+Validation: workflow YAML parses and all `run:` blocks pass `bash -n`;
+`cargo fmt`/`clippy`/`test` (85) unaffected; OKF validator PASSED (0 errors,
+0 warnings).
+
 

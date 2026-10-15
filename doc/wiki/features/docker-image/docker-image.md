@@ -44,14 +44,20 @@ image.
 
 | Stage | Base | Purpose |
 |-------|------|---------|
-| `builder` | `rust:1-alpine` | `apk add musl-dev openssl-dev pkgconf`; compiles the dependency graph, then the crate, with `cargo build --release --locked`. |
-| `runtime` | `alpine:3` | `apk add ca-certificates libssl3 libgcc`; copies `/usr/local/bin/rustydeps`; `WORKDIR /workspace`; `ENTRYPOINT ["rustydeps"]`, `CMD ["scan", "."]`. |
+| `builder` | `rust:1-alpine` | `apk add openssl-dev openssl-libs-static pkgconf` (`gcc`, `musl-dev` and `ca-certificates` are already in the base image); compiles the dependency graph against a stub `src/main.rs`, then touches the entry point and builds the real crate with `cargo build --release --locked`, asserting `--version` output before the layer is accepted. |
+| `runtime` | `alpine:3` | `apk add ca-certificates`; copies the statically linked `/usr/local/bin/rustydeps`; `WORKDIR /workspace`; `ENTRYPOINT ["rustydeps"]`, `CMD ["scan", "."]`. |
 
 The dependency graph is compiled on its own layer against a stub `src/main.rs`
 before the real sources are copied, so editing `src/` does not rebuild every
-third-party crate. `templates/report.html` is copied in the builder only: Askama
-embeds the template into the binary at compile time, so the runtime stage needs
-no template directory.
+third-party crate. The stub has a trap: it is newer than the sources `COPY`
+preserves mtimes for, so cargo's mtime-based freshness check would skip the real
+build and leave the stub binary in place. The Dockerfile therefore runs
+`touch src/main.rs` and asserts `--version` output after the build. See
+[Verification](#verification).
+
+`templates/report.html` is copied in the builder only: Askama embeds the
+template into the binary at compile time, so the runtime stage needs no template
+directory.
 
 `CMD ["scan", "."]` resolves to `/workspace`, the image's working directory, so
 `docker run --rm -v "$PWD:/workspace" IMAGE` scans the mount and writes
@@ -89,12 +95,32 @@ all.
   release window by now, and the rolling `alpine:3`/`rust:1-alpine` pair tracks
   the same Alpine release, keeping the build-stage libc and run-stage libc in
   step instead of pinning the runtime to an older musl than the builder.
-- **OpenSSL in the runtime image.** On Linux `reqwest` uses `native-tls`, so the
-  binary links `openssl-sys` — verified with
-  `cargo tree --target x86_64-unknown-linux-gnu -i openssl-sys`. Hence
-  `openssl-dev` while building and `libssl3`/`libcrypto3` at run time. Switching
-  the client to `rustls` would remove that dependency but is a product-wide TLS
-  change, out of scope here (see *Not done*).
+- **OpenSSL is linked statically, and the runtime stage carries none of it.**
+  On Linux `reqwest` uses `native-tls`, so the dependency graph contains
+  `openssl-sys` — verified with `cargo tree --target x86_64-unknown-linux-gnu -i
+  openssl-sys`. The `x86_64-unknown-linux-musl` target links statically by
+  default (`crt-static`), so the linker wants `libssl.a`/`libcrypto.a`, which is
+  what `openssl-libs-static` provides; Alpine builds OpenSSL with `no-zlib`
+  (aports `main/openssl/APKBUILD`), so no `-lz` flag is needed. Because the
+  resulting binary carries libc, libgcc and OpenSSL internally, the runtime
+  stage installs only `ca-certificates`, which HTTPS lookups read at run time.
+  Migrating to `rustls` would remove OpenSSL from the build graph but is a
+  product-wide TLS change, out of scope here.
+- **The dependency-cache stub needs `touch`.** Cargo decides freshness by
+  mtime, and Docker `COPY` preserves the source mtimes from the build context.
+  The stub written inside the builder layer is therefore *newer* than the real
+  sources, so the second `cargo build` was a no-op (0.14 s, no recompile) and
+  the stub — a `rustydeps` that accepts any argument, prints nothing and exits
+  0 — was copied into the runtime stage. `touch src/main.rs` forces the
+  recompile, and `./target/release/rustydeps --version | grep -q '^rustydeps '`
+  in the same `RUN` makes any recurrence a build failure rather than an empty
+  image.
+- **The PR smoke test asserts on container output.** A green step is not
+  evidence by itself: the first version of the step completed in under a second
+  with no captured output. It now captures `--version`, requires it to contain
+  `rustydeps`, has the scan write its report through the bind mount, and asserts
+  the file is non-empty and HTML. That assertion is what exposed the stub bug
+  above.
 - **Runs as root.** CI mounts a workspace owned by an arbitrary host user; a
   fixed non-root uid could not write the report into it. Recorded in the README
   so the choice is deliberate rather than accidental.
@@ -112,17 +138,31 @@ all.
 
 - `cargo fmt --all --check`, `cargo clippy --all-targets -- -D warnings` and
   `cargo test` (85 tests) are clean.
-- `cargo build --release --locked` — the builder stage's exact command — succeeds.
-- The smoke-test commands were run against the local release binary: `--version`
-  prints `rustydeps 0.1.0`, and `scan . --offline --no-open -o <tmp>` exits 0 and
-  writes a 65 KB report.
+- `cargo build --release --locked` — the builder stage's command — succeeds, and
+  `--version` plus an offline scan pass against the local release binary.
 - `.github/workflows/docker.yml` parses as YAML; its triggers, permissions, step
-  list and metadata tags were inspected, and both `run:` blocks pass `bash -n`;
+  list and metadata tags were inspected, and every `run:` block passes `bash -n`;
   the lowercase step was executed locally and yields
   `name=ghcr.io/alexdevstheweb/rustydeps`.
-- **Not verified locally:** `docker build` / `docker run`. No container runtime
-  is installed on the development machine, so the image itself is first built by
-  the new workflow. See the [implementation report](implementation-report.md).
+- **The image itself is verified by CI** (Docker workflow run 38801998432 on
+  PR #16, 3m44s): the build compiles the crate and passes the in-Dockerfile
+  `--version` assertion, and the smoke test reports
+  `container reports: rustydeps 0.1.0` and
+  `report written through the mount: 65482 bytes`, having asserted the file is
+  non-empty HTML.
+- The `cargo build`-skips-the-rebuild mechanism (the stub bug below) was
+  reproduced locally in a scratch crate: a stub built first plus an
+  older-mtime source made cargo print `Finished ... in 0.01s` and keep the stub,
+  while `touch` forced `Compiling` and a printing binary.
+- Two failing runs preceded the green one and are part of the record:
+  - 38800896598 — smoke test failed with an empty `--version`, revealing that
+    the shipped binary was the stub.
+  - 38801611324 — surfaced the static-link failure
+    (`ld: cannot find -lssl`) that the stub had been hiding, because an unused
+    crate is not linked.
+- **Not verified:** the multi-arch (`linux/arm64`) build and an actual push to
+  GHCR, both of which only run on `main`/tag events; the PR job builds
+  `linux/amd64` and loads it locally.
 
 ## Related
 
