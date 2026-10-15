@@ -89,16 +89,28 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      # An image is only useful if it runs. `--offline` keeps the check
-      # deterministic while still exercising the entrypoint, the manifest
-      # scanner and report rendering; the report goes to /tmp so the checkout
-      # stays clean.
+      # An image is only useful if it runs. The assertions below are what make
+      # this step meaningful: the version banner must come back from the
+      # container, and the scan must write a real report through the mounted
+      # workspace. `--offline` keeps the check deterministic; the report goes
+      # to a scratch directory inside the mount and is removed afterwards.
       - name: Smoke-test the image
         if: github.event_name == 'pull_request'
         run: |
           set -euo pipefail
           image="$(printf '%s\n' "${{ steps.meta.outputs.tags }}" | head -n 1)"
           echo "testing ${image}"
-          docker run --rm "${image}" --version
+
+          version="$(docker run --rm "${image}" --version)"
+          echo "container reports: ${version}"
+          grep -q "rustydeps" <<< "${version}"
+
+          scratch="${GITHUB_WORKSPACE}/.ci-smoke"
+          mkdir -p "${scratch}"
           docker run --rm -v "${GITHUB_WORKSPACE}:/workspace" "${image}" \
-            scan /workspace --offline --no-open -o /tmp/rustydeps-report.html
+            scan /workspace --offline --no-open -o /workspace/.ci-smoke/report.html
+
+          test -s "${scratch}/report.html"
+          grep -qi "<html" "${scratch}/report.html"
+          echo "report written through the mount: $(wc -c < "${scratch}/report.html") bytes"
+          rm -rf "${scratch}"

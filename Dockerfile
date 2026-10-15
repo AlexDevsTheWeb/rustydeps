@@ -12,10 +12,12 @@
 # ---------------------------------------------------------------------------
 FROM rust:1-alpine AS builder
 
-# `openssl-dev` provides the TLS headers: on Linux `reqwest` goes through the
-# system TLS stack (native-tls), so `openssl-sys` needs the headers plus
-# `musl-dev`/`pkgconf` to find and link them.
-RUN apk add --no-cache musl-dev openssl-dev pkgconf
+# `rust:1-alpine` already ships `gcc`, `musl-dev` and `ca-certificates` (see
+# docker-rust's `Dockerfile-alpine.template`), so the only addition is
+# `openssl-dev`, which provides the TLS headers: on Linux `reqwest` goes through
+# the system TLS stack (native-tls), so `openssl-sys` needs the headers plus
+# `pkgconf` to find and link them.
+RUN apk add --no-cache openssl-dev pkgconf
 
 WORKDIR /build
 

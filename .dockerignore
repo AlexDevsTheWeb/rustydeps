@@ -1,6 +1,10 @@
 # Keep the build context to what `cargo build --release` actually reads
 # (`Cargo.toml`, `Cargo.lock`, `src/`, `templates/`). Everything else only
 # slows the upload and busts the dependency-cache layer.
+#
+# Patterns without a slash match at the context root only, so `*.html` and
+# `*.md` do not reach into `templates/` or `doc/` — `templates/report.html` is
+# still sent and the build needs it. Use `**/` for a recursive match.
 
 # Rust build output and local caches
 target/
