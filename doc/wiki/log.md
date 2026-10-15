@@ -283,4 +283,11 @@ Validation: workflow YAML parses and both `run:` blocks pass `bash -n`;
 `cargo fmt --all --check` clean; `cargo clippy --all-targets -- -D warnings`
 clean; `cargo test` 85 passed; OKF validator PASSED (0 errors, 0 warnings).
 
+## 2026-10-15 — Release automation draft PR opened
+
+Opened draft PR #13 (`feat/release-automation` → `development`) and recorded the
+link in the release-automation implementation report's MR section.
+
+Validation: OKF validator PASSED (0 errors, 0 warnings).
+
 

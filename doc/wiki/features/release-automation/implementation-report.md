@@ -58,8 +58,8 @@ None.
 
 ## MR
 
-Draft PR into `development` from `feat/release-automation` (see the PR
-description for the link).
+Draft PR #13 into `development` from `feat/release-automation`:
+<https://github.com/AlexDevsTheWeb/rustydeps/pull/13>.
 
 ## Related
 
