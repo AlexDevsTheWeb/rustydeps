@@ -7,7 +7,7 @@
 
 # Generated reports and local HTML output
 /reports/
-*.html
+
 !doc/**/*.html
 # Askama report template (source, not generated output)
 !templates/**/*.html
