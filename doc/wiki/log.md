@@ -222,4 +222,10 @@ suppresses the launch, the default opens and logs success, `--format json` does
 not open, and the scan still exits 0; OKF validator PASSED (0 errors,
 0 warnings).
 
+## 2026-10-15 — Auto-open draft PR opened
+
+Opened draft PR #9 (`feat/auto-open` → `development`).
+
+Validation: OKF validator PASSED (0 errors, 0 warnings).
+
 
