@@ -49,6 +49,10 @@ pub struct ScanArgs {
     #[arg(long, alias = "no-fetch")]
     pub offline: bool,
 
+    /// Do not open the generated HTML report in the default browser.
+    #[arg(long)]
+    pub no_open: bool,
+
     /// Emit verbose (debug-level) logging.
     #[arg(short, long)]
     pub verbose: bool,
@@ -61,4 +65,25 @@ pub enum OutputFormat {
     Html,
     /// Machine-readable JSON.
     Json,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn opens_the_report_by_default() {
+        let cli = Cli::try_parse_from(["rustydeps", "scan"]).expect("parse");
+        match cli.command {
+            Command::Scan(args) => assert!(!args.no_open),
+        }
+    }
+
+    #[test]
+    fn no_open_suppresses_browser_launch() {
+        let cli = Cli::try_parse_from(["rustydeps", "scan", "--no-open"]).expect("parse");
+        match cli.command {
+            Command::Scan(args) => assert!(args.no_open),
+        }
+    }
 }
