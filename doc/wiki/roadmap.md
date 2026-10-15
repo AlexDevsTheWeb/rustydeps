@@ -14,7 +14,7 @@ tags: [roadmap, phases, planning]
 
 RustyDeps ships in six incremental phases. Each phase leaves the tool in a
 usable state and maps to modules described in [[architecture]]. Phases 1
-through 4 are complete; Phase 5 is next.
+through 5 are complete; the AI changelog summarizer is next.
 
 ## Phase status
 
@@ -24,8 +24,8 @@ through 4 are complete; Phase 5 is next.
 | 2 | Parsers (Cargo & npm) & Registry HTTP Clients | ✅ Done |
 | 3 | Unified DTO & SemVer Logic | ✅ Done |
 | 4 | Interactive HTML Report Engine | ✅ Done |
-| 5 | AI Changelog Summarizer Module | Next |
-| 6 | Multi-ecosystem Expansion (PyPI, Go, Composer) | Planned |
+| 5 | Multi-ecosystem Expansion (PyPI, Go, Composer) | ✅ Done |
+| 6 | AI Changelog Summarizer Module | Next |
 
 ## Phase 1 — Rust Setup & CLI ✅
 
@@ -66,16 +66,20 @@ update commands, search and risk filters, an empty state, and per-project
 reflects a real scan. See [[phase-4-html-report]] and
 `doc/raw/2026-10-15/2026-10-15-phase4.md`.
 
-## Phase 5 — AI Changelog Summarizer
+## Phase 5 — Multi-ecosystem Expansion (PyPI, Go, Composer) ✅
 
-Add the optional, flag-gated AI module that summarizes changelogs and flags
-migration notes. Exit criteria: `--ai` adds summaries without becoming a hard
-dependency of a successful scan.
+Added `PypiParser`, `GoParser`, and `ComposerParser` plus the PyPI, Go module
+proxy, and Packagist clients behind the existing `PackageParser`/`RegistryClient`
+traits, and extended `Ecosystem` with `Pypi`/`Go`/`Composer`. Exit criteria met:
+the new ecosystems required no changes to the scanner or the report template.
+See [[phase-5-ecosystems]] and `doc/raw/2026-10-15/2026-10-15-phase5.md`.
 
-## Phase 6 — Multi-ecosystem Expansion
+## Phase 6 — AI Changelog Summarizer
 
-Add PyPI, Go (`go.mod`), and Composer parsers and clients behind the existing
-trait. Exit criteria: new ecosystems require no changes to the scanner.
+Replace the Phase 3 templated summaries with live provider calls that fetch
+changelogs and flag migration notes, and broaden `AtRisk` with deprecation data.
+Exit criteria: `--ai` adds real summaries without becoming a hard dependency of
+a successful scan.
 
 ## Related
 
