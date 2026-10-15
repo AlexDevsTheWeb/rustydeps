@@ -28,8 +28,11 @@ use crate::classifier::{classify, ClassifiedDependency};
 use crate::cli::{Cli, Command, OutputFormat, ScanArgs};
 use crate::model::{Ecosystem, UpdateType};
 use crate::parser::{parse_manifests, ParsedDependency};
+use crate::registry::composer::ComposerClient;
 use crate::registry::crates_io::CratesIoClient;
+use crate::registry::go::GoRegistryClient;
 use crate::registry::npm::NpmRegistryClient;
+use crate::registry::pypi::PypiClient;
 use crate::registry::{fetch_latest_versions, RegistryClient, RegistryError, DEFAULT_CONCURRENCY};
 use crate::report::{ReportData, ReportMeta};
 
@@ -202,41 +205,78 @@ fn write_report(path: &Path, contents: &str) -> Result<()> {
 async fn resolve_lookups(dependencies: &[ParsedDependency]) -> VersionLookups {
     let mut lookups = VersionLookups::new();
 
-    let cargo_names = unique_names(dependencies, Ecosystem::Cargo);
-    if !cargo_names.is_empty() {
-        match CratesIoClient::new() {
-            Ok(client) => {
-                record(
-                    &mut lookups,
-                    client.ecosystem(),
-                    fetch_latest_versions(&client, &cargo_names, DEFAULT_CONCURRENCY).await,
-                );
-            }
-            Err(error) => warn!(
-                %error,
-                "could not build the crates.io client; Cargo versions will be unknown"
-            ),
-        }
-    }
-
-    let npm_names = unique_names(dependencies, Ecosystem::Npm);
-    if !npm_names.is_empty() {
-        match NpmRegistryClient::new() {
-            Ok(client) => {
-                record(
-                    &mut lookups,
-                    client.ecosystem(),
-                    fetch_latest_versions(&client, &npm_names, DEFAULT_CONCURRENCY).await,
-                );
-            }
-            Err(error) => warn!(
-                %error,
-                "could not build the npm registry client; npm versions will be unknown"
-            ),
-        }
-    }
+    resolve_ecosystem(
+        &mut lookups,
+        dependencies,
+        Ecosystem::Cargo,
+        CratesIoClient::new,
+        "crates.io",
+    )
+    .await;
+    resolve_ecosystem(
+        &mut lookups,
+        dependencies,
+        Ecosystem::Npm,
+        NpmRegistryClient::new,
+        "npm registry",
+    )
+    .await;
+    resolve_ecosystem(
+        &mut lookups,
+        dependencies,
+        Ecosystem::Pypi,
+        PypiClient::new,
+        "PyPI",
+    )
+    .await;
+    resolve_ecosystem(
+        &mut lookups,
+        dependencies,
+        Ecosystem::Go,
+        GoRegistryClient::new,
+        "Go module proxy",
+    )
+    .await;
+    resolve_ecosystem(
+        &mut lookups,
+        dependencies,
+        Ecosystem::Composer,
+        ComposerClient::new,
+        "Packagist",
+    )
+    .await;
 
     lookups
+}
+
+/// Fetch the latest versions for one ecosystem, degrading gracefully when the
+/// client cannot be built or a lookup fails.
+async fn resolve_ecosystem<C, F>(
+    lookups: &mut VersionLookups,
+    dependencies: &[ParsedDependency],
+    ecosystem: Ecosystem,
+    build: F,
+    label: &str,
+) where
+    C: RegistryClient,
+    F: FnOnce() -> Result<C, reqwest::Error>,
+{
+    let names = unique_names(dependencies, ecosystem);
+    if names.is_empty() {
+        return;
+    }
+
+    match build() {
+        Ok(client) => record(
+            lookups,
+            client.ecosystem(),
+            fetch_latest_versions(&client, &names, DEFAULT_CONCURRENCY).await,
+        ),
+        Err(error) => warn!(
+            %error,
+            "could not build the {label} client; versions will be unknown"
+        ),
+    }
 }
 
 /// Classify every dependency against its resolved latest version and attach a

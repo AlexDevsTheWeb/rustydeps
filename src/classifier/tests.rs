@@ -77,6 +77,18 @@ fn downgrades_are_unknown() {
 }
 
 #[test]
+fn accepts_v_prefixed_and_not_equal_specifiers() {
+    // Go and Packagist tags carry a `v` prefix.
+    assert_eq!(classify_update("v1.9.1", "v1.10.0"), UpdateType::AtRisk);
+    assert_eq!(classify_update("v1.9.1", "v1.9.2"), UpdateType::Safe);
+    assert_eq!(classify_update("v1.9.1", "v2.0.0"), UpdateType::Breaking);
+
+    // PyPI `!=` and compatible-release (`~=`) specifiers.
+    assert_eq!(classify_update("!=1.0.0", "2.0.0"), UpdateType::Breaking);
+    assert_eq!(classify_update("~=2.5", "2.5.1"), UpdateType::Safe);
+}
+
+#[test]
 fn latest_stable_ignores_prereleases_and_invalid_entries() {
     let picked = latest_stable(["1.0.0", "1.1.0", "2.0.0-rc.1", "1.0.5", "garbage"]);
     assert_eq!(picked.as_deref(), Some("1.1.0"));

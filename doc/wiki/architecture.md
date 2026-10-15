@@ -32,7 +32,7 @@ CLI (clap)
 ## Modules
 
 > Status: the CLI, filesystem walk, manifest parsers, registry clients,
-> SemVer classifier, and HTML report engine below are implemented (Phases 1–4);
+> SemVer classifier, and HTML report engine below are implemented (Phases 1–5);
 > the AI module is a Phase 3 scaffold with live providers still to come.
 
 ### CLI (`src/cli.rs`, `src/main.rs`)
@@ -93,8 +93,8 @@ pub trait PackageParser: Send + Sync {
 `manifest_path`, and `is_dev_dependency`. A driver, `parse_manifests`, routes
 each discovered manifest to the first parser that claims it; a manifest a
 parser claims but cannot decode is recorded and skipped rather than aborting
-the scan. `CargoParser` (`Cargo.toml`) and `NpmParser` (`package.json`)
-implement the trait first; later phases add `PyPI`, `Go`, and `Composer`.
+the scan. Five parsers implement the trait — Cargo and npm (Phase 2), then
+PyPI, Go and Composer (Phase 5).
 
 - **`CargoParser`** decodes `[dependencies]`, `[dev-dependencies]`, and
   `[workspace.dependencies]`, resolving `dep = { workspace = true }`
@@ -102,6 +102,14 @@ implement the trait first; later phases add `PyPI`, `Go`, and `Composer`.
 - **`NpmParser`** decodes `dependencies` and `devDependencies`; specs that do
   not point at `registry.npmjs.org` (`file:`, `link:`, `workspace:`, `npm:`
   aliases, git/http URLs) are skipped.
+- **`PypiParser`** decodes `pyproject.toml` (PEP 621 `[project.dependencies]`
+  and Poetry `[tool.poetry.dependencies]`) and `requirements.txt`; PEP 508
+  specifiers are reduced to a name plus a specifier, and the Poetry `python`
+  entry is skipped.
+- **`GoParser`** decodes `go.mod` direct `require` directives, keeping the `v`
+  prefix and skipping `// indirect`, `replace`, and `exclude`.
+- **`ComposerParser`** decodes `composer.json` `require`/`require-dev`, skipping
+  PHP platform pseudo-packages (`php`, `ext-*`, `lib-*`, `composer-*`, `hhvm`).
 
 ### Registry clients (`src/registry/`)
 
@@ -117,13 +125,17 @@ flight using `futures` `buffer_unordered`.
   `versions` entry, else `max_version`).
 - **`NpmRegistryClient`** queries `registry.npmjs.org/{name}` (scoped names
   percent-encoded) and reads `dist-tags.latest`.
+- **`PypiClient`** queries `pypi.org/pypi/{name}/json` and returns the highest
+  stable release (skipping fully yanked files; falls back to `info.version`).
+- **`GoRegistryClient`** queries `proxy.golang.org/{module}/@v/list` (uppercase
+  module-path letters encoded as `!x`) and returns the highest stable tag.
+- **`ComposerClient`** queries `repo.packagist.org/p2/{name}.json` and returns
+  the highest stable tag, skipping `dev-*` and prereleases.
 
-Response parsing is split from the HTTP calls into pure
-`parse_crates_io_response` / `parse_npm_response` functions so it is unit
-tested without network access. Client failures (transport error, 404,
-unexpected body) degrade to "unknown latest" and are recorded on the
-dependency; they never abort the whole scan. The AI module's changelog
-metadata is still to come.
+Response parsing is split from the HTTP calls into pure `parse_*` functions
+(one per client) so every client is unit tested without network access. Client
+failures (transport error, 404, unexpected body) degrade to "unknown latest"
+and are recorded on the dependency; they never abort the whole scan.
 
 ### SemVer classification (`src/classifier/`)
 
@@ -194,5 +206,6 @@ Phase 4 report.
 - [[phase-2-parsers-registry]] — the implemented parser and registry clients.
 - [[phase-3-semver-classifier]] — the classifier, AI scaffold, and CLI polish.
 - [[phase-4-html-report]] — the self-contained HTML report engine.
+- [[phase-5-ecosystems]] — the PyPI/Go/Composer parsers and clients.
 - [[okf-compliance]] — how this documentation is licensed and validated.
 - [[index]] — knowledge-graph entrypoint.
