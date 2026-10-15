@@ -1,10 +1,14 @@
 //! Client for the crates.io registry (`https://crates.io/api/v1/crates/{name}`).
 //!
 //! crates.io requires a descriptive `User-Agent`; requests without one are
-//! rejected. The latest version is read from `crate.max_version`.
+//! rejected. The upgrade target defaults to the latest *stable* release:
+//! `crate.max_stable_version` when present, otherwise the highest non-prerelease,
+//! non-yanked entry in `versions`. A prerelease-only crate falls back to
+//! `crate.max_version` so the scan still reports something.
 
 use serde::Deserialize;
 
+use crate::classifier::latest_stable;
 use crate::model::Ecosystem;
 use crate::registry::{RegistryClient, RegistryError};
 
@@ -81,14 +85,25 @@ fn http_error(package: &str, source: reqwest::Error) -> RegistryError {
 struct CrateResponse {
     #[serde(rename = "crate")]
     krate: CrateInfo,
+    #[serde(default)]
+    versions: Vec<VersionEntry>,
 }
 
 #[derive(Debug, Deserialize)]
 struct CrateInfo {
     max_version: String,
+    #[serde(default)]
+    max_stable_version: Option<String>,
 }
 
-/// Extract the latest version from a crates.io API response body.
+#[derive(Debug, Deserialize)]
+struct VersionEntry {
+    num: String,
+    #[serde(default)]
+    yanked: bool,
+}
+
+/// Extract the latest stable version from a crates.io API response body.
 pub fn parse_crates_io_response(body: &str, package: &str) -> Result<String, RegistryError> {
     let parsed: CrateResponse =
         serde_json::from_str(body).map_err(|err| RegistryError::InvalidResponse {
@@ -97,16 +112,39 @@ pub fn parse_crates_io_response(body: &str, package: &str) -> Result<String, Reg
             message: err.to_string(),
         })?;
 
-    let version = parsed.krate.max_version;
-    if version.is_empty() {
-        return Err(RegistryError::InvalidResponse {
-            registry: REGISTRY_NAME,
-            package: package.to_string(),
-            message: "missing `crate.max_version`".to_string(),
-        });
+    let invalid = |message: &str| RegistryError::InvalidResponse {
+        registry: REGISTRY_NAME,
+        package: package.to_string(),
+        message: message.to_string(),
+    };
+
+    if let Some(stable) = parsed
+        .krate
+        .max_stable_version
+        .as_deref()
+        .filter(|version| !version.is_empty())
+    {
+        return Ok(stable.to_string());
     }
 
-    Ok(version)
+    let from_versions = latest_stable(
+        parsed
+            .versions
+            .iter()
+            .filter(|entry| !entry.yanked)
+            .map(|entry| entry.num.as_str()),
+    );
+    if let Some(stable) = from_versions {
+        return Ok(stable);
+    }
+
+    // No stable release published: fall back to the newest version, even if it
+    // is a prerelease.
+    if parsed.krate.max_version.is_empty() {
+        return Err(invalid("missing `crate.max_version`"));
+    }
+
+    Ok(parsed.krate.max_version)
 }
 
 #[cfg(test)]
@@ -114,18 +152,45 @@ mod tests {
     use super::*;
 
     #[test]
-    fn extracts_max_version() {
+    fn prefers_the_max_stable_version() {
         let body = r#"{
-            "crate": {
-                "name": "serde",
-                "max_version": "1.0.203",
-                "max_stable_version": "1.0.203"
-            }
+            "crate": { "name": "serde", "max_version": "2.0.0-rc.1", "max_stable_version": "1.0.229" }
         }"#;
 
         assert_eq!(
             parse_crates_io_response(body, "serde").expect("version"),
-            "1.0.203"
+            "1.0.229"
+        );
+    }
+
+    #[test]
+    fn falls_back_to_the_highest_stable_version() {
+        let body = r#"{
+            "crate": { "name": "serde", "max_version": "2.0.0-rc.1" },
+            "versions": [
+                { "num": "1.7.0" },
+                { "num": "2.0.0-rc.1" },
+                { "num": "1.9.0" },
+                { "num": "1.8.0", "yanked": true }
+            ]
+        }"#;
+
+        assert_eq!(
+            parse_crates_io_response(body, "serde").expect("version"),
+            "1.9.0"
+        );
+    }
+
+    #[test]
+    fn falls_back_to_max_version_when_only_prereleases_exist() {
+        let body = r#"{
+            "crate": { "name": "serde", "max_version": "0.1.0-alpha.1" },
+            "versions": [ { "num": "0.1.0-alpha.1" } ]
+        }"#;
+
+        assert_eq!(
+            parse_crates_io_response(body, "serde").expect("version"),
+            "0.1.0-alpha.1"
         );
     }
 
@@ -141,9 +206,9 @@ mod tests {
     }
 
     #[test]
-    fn rejects_empty_max_version() {
+    fn rejects_a_response_with_no_version_at_all() {
         let body = r#"{ "crate": { "max_version": "" } }"#;
-        let error = parse_crates_io_response(body, "empty").expect_err("empty version should fail");
+        let error = parse_crates_io_response(body, "empty").expect_err("no version should fail");
         assert!(matches!(error, RegistryError::InvalidResponse { .. }));
     }
 }
