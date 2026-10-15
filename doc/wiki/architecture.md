@@ -31,18 +31,22 @@ CLI (clap)
 
 ## Modules
 
-> Status: the CLI, filesystem walk, manifest parsers, and registry clients
-> below are implemented (Phases 1–2). The classification, report, and AI
-> modules remain planned.
+> Status: the CLI, filesystem walk, manifest parsers, registry clients, and
+> SemVer classifier below are implemented (Phases 1–3); the AI module exists as
+> a Phase 3 scaffold. The report module remains planned.
 
 ### CLI (`src/cli.rs`, `src/main.rs`)
 
 Built with `clap` (derive pattern). The `scan` subcommand takes a root `path`
 (default `.`), `--ai`, `--output`/`-o` (default `report.html`), `--format
-html|json`, and `--verbose`/`-v`. `main` is `#[tokio::main]` and returns
-`anyhow::Result`; it initializes `tracing-subscriber` (logs go to stderr so
-stdout stays clean for `--format json`) and dispatches the subcommand. *Implemented
-in Phase 1; `--output`/`--ai` are accepted but not yet wired to a report engine.*
+html|json`, `--offline`/`--no-fetch`, and `--verbose`/`-v`. `main` is
+`#[tokio::main]` and returns `anyhow::Result`; it initializes
+`tracing-subscriber` (logs go to stderr so stdout stays clean for `--format
+json`) and dispatches the subcommand. On text runs it prints the "Full Block
+Solid" ASCII banner (Rust-orange logo, cyan version, grey tagline); the banner
+is suppressed for `--format json` and its colours drop out when stdout is not a
+terminal. `--offline` skips registry lookups. *`--output` is accepted but not yet
+wired to the Phase 4 report engine.*
 
 ### Filesystem walk (`src/scanner.rs`)
 
@@ -106,7 +110,9 @@ dependency, no `dyn` dispatch) with `fetch_latest_version(name)`; the helper
 flight using `futures` `buffer_unordered`.
 
 - **`CratesIoClient`** queries `/api/v1/crates/{name}` with the descriptive
-  `User-Agent` crates.io requires and reads `crate.max_version`.
+  `User-Agent` crates.io requires and returns the latest *stable* version
+  (`crate.max_stable_version`, else the highest non-prerelease non-yanked
+  `versions` entry, else `max_version`).
 - **`NpmRegistryClient`** queries `registry.npmjs.org/{name}` (scoped names
   percent-encoded) and reads `dist-tags.latest`.
 
@@ -117,12 +123,17 @@ unexpected body) degrade to "unknown latest" and are recorded on the
 dependency; they never abort the whole scan. The AI module's changelog
 metadata is still to come.
 
-### SemVer classification
+### SemVer classification (`src/classifier/`)
 
-A pure function of (declared requirement, current version, latest version) →
-`UpdateType`. Keeping it pure makes it the highest-value unit-test target.
-Versions are parsed with the `semver` crate; a manifest's declared range governs
-what counts as inside or outside the allowed upgrade window.
+`classify_update(current, latest) -> UpdateType` is a pure function — the
+highest-value unit-test target. It parses the declared value leniently (`^1.2.3`,
+`~1.2`, `1`) and the registry version with the `semver` crate, then buckets the
+jump: major difference → `Breaking`; minor difference inside the declared
+requirement → `Safe`, outside it → `AtRisk`; patch-only → `Safe`; equal →
+`UpToDate`; unparseable, a downgrade, or a stable version facing a prerelease →
+`Unknown`. `latest_stable` keeps the upgrade target on the newest stable
+release. `classify` builds the `ClassifiedDependency` result set. See
+[[phase-3-semver-classifier]].
 
 ### Report generator (`src/report/`)
 
@@ -136,33 +147,34 @@ indicators, inline drawer, filter/search, empty state) is fixed by
 
 ### AI module (`src/ai/`)
 
-Optional and flag-gated. Given a dependency and its version jump, fetches the
-relevant changelog/release notes and summarizes breaking changes and migration
-notes. Any failure here is non-fatal — the scan and report still complete.
+Optional and flag-gated. Phase 3 scaffolds it: `Summarizer` detects a provider
+from `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, or `RUSTYDEPS_AI_ENDPOINT`, and every
+`AtRisk`/`Breaking` dependency receives a templated one-line summary. Live
+provider calls that fetch the relevant changelog/release notes and summarize
+breaking changes and migration notes are Phase 5. Any failure here is non-fatal
+— the scan and report still complete.
 
-## Core DTOs (`src/model.rs`)
+## Core DTOs
 
-`Ecosystem` is implemented (Phase 2); the unified `Dependency` and `UpdateType`
-DTOs arrive in Phase 3.
+`src/model.rs` holds the shared enums — `Ecosystem` (Phase 2) and `UpdateType`
+(Phase 3):
 
 ```rust
 pub enum Ecosystem { Cargo, Npm /*, PyPI, Go, Composer */ }
 
-pub struct Dependency {
-    pub name: String,
-    pub ecosystem: Ecosystem,
-    pub current: String,
-    pub latest: Option<String>,
-    pub manifest_path: PathBuf,
-    pub repository: PathBuf,
-}
-
 pub enum UpdateType {
-    Safe,     // patch/minor within the declared range
-    AtRisk,   // outside the range, not obviously breaking
-    Breaking, // major jump or a violated requirement
+    Safe,     // patch/minor bump inside the declared requirement
+    AtRisk,   // bump outside the declared requirement
+    Breaking, // major jump
+    UpToDate, // declared version already latest
+    Unknown,  // unparseable, downgrade, or missing registry data
 }
 ```
+
+The classified result set is `ClassifiedDependency` in `src/classifier/mod.rs`
+(`name`, `ecosystem`, `current_version`, `latest_version`, `update_type`,
+`manifest_path`, `is_dev_dependency`, `ai_summary`); it is the input to the
+Phase 4 report.
 
 ## Quality bars
 
@@ -175,5 +187,6 @@ pub enum UpdateType {
 
 - [[roadmap]] — phase plan that builds these modules in order.
 - [[phase-2-parsers-registry]] — the implemented parser and registry clients.
+- [[phase-3-semver-classifier]] — the classifier, AI scaffold, and CLI polish.
 - [[okf-compliance]] — how this documentation is licensed and validated.
 - [[index]] — knowledge-graph entrypoint.

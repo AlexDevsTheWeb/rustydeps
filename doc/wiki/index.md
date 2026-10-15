@@ -34,7 +34,8 @@ and produces an interactive HTML report with optional AI changelog summaries.
 
 | Page | What it covers |
 |------|----------------|
-| [[phase-2-parsers-registry]] | Manifest parsers (`PackageParser`, Cargo, npm) and the crates.io/npm registry clients; see [[implementation-report]]. |
+| [[phase-2-parsers-registry]] | Manifest parsers (`PackageParser`, Cargo, npm) and the crates.io/npm registry clients; [implementation report](features/phase-2-parsers-registry/implementation-report.md). |
+| [[phase-3-semver-classifier]] | SemVer classifier (`Safe`/`AtRisk`/`Breaking`/`UpToDate`/`Unknown`), latest-stable targeting, templated AI summaries, CLI banner, and `--offline` mode; [implementation report](features/phase-3-semver-classifier/implementation-report.md). |
 
 ## Source documents
 
@@ -43,6 +44,8 @@ and produces an interactive HTML report with optional AI changelog summaries.
   task that created this wiki.
 - `doc/raw/2026-10-15/2026-10-15-phase2.md` — the Phase 2 brief
   implemented by [[phase-2-parsers-registry]].
+- `doc/raw/2026-10-15/2026-10-15-phase3.md` — the Phase 3 brief
+  implemented by [[phase-3-semver-classifier]].
 
 ## Conventions
 

@@ -97,11 +97,12 @@ tested without network access.
 `cargo fmt --all --check`, `cargo clippy --all-targets -- -D warnings`, and
 `cargo test` (28 tests) all pass. A live `scan` resolved real versions from
 crates.io and npm and recorded a 404 for a non-existent crate without
-aborting. Full detail in [[implementation-report]].
+aborting. Full detail in the [implementation report](implementation-report.md).
 
 ## Related
 
 - [[architecture]] — the modules this feature implements.
 - [[roadmap]] — Phase 2 of six.
-- [[implementation-report]] — file-by-file report, tests, and follow-ups.
+- [implementation report](implementation-report.md) — file-by-file report,
+  tests, and follow-ups.
 - [[index]] — knowledge-graph entrypoint.

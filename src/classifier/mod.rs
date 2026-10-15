@@ -1,0 +1,168 @@
+//! SemVer classification: compare a declared version requirement against the
+//! latest published version and bucket the result into an [`UpdateType`].
+//!
+//! The classifier is a pure function of the two version strings, which makes it
+//! the highest-value unit-test target. Registry clients use [`latest_stable`]
+//! to keep a stable release as the upgrade target.
+
+#[cfg(test)]
+mod tests;
+
+use std::path::PathBuf;
+
+use semver::{Prerelease, Version, VersionReq};
+use serde::Serialize;
+
+use crate::model::{Ecosystem, UpdateType};
+use crate::parser::ParsedDependency;
+
+/// A dependency after its latest version was resolved and classified.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+pub struct ClassifiedDependency {
+    /// Package name.
+    pub name: String,
+    /// The ecosystem the package belongs to.
+    pub ecosystem: Ecosystem,
+    /// Declared version or requirement, verbatim from the manifest.
+    pub current_version: String,
+    /// Latest published version, when the registry lookup succeeded.
+    pub latest_version: Option<String>,
+    /// The classification of the declared version against the latest one.
+    pub update_type: UpdateType,
+    /// Manifest the dependency was declared in.
+    pub manifest_path: PathBuf,
+    /// Whether the dependency is development-only.
+    pub is_dev_dependency: bool,
+    /// One-line summary (AI-generated in a later phase, templated for now).
+    pub ai_summary: Option<String>,
+}
+
+/// Classify `current` (a declared version or requirement) against `latest`.
+///
+/// Returns [`UpdateType::Unknown`] when either side cannot be parsed, when the
+/// registry's version is older than what is declared, or when a stable current
+/// version would have to move to a prerelease.
+pub fn classify_update(current: &str, latest: &str) -> UpdateType {
+    let Some(base) = declared_version(current) else {
+        return UpdateType::Unknown;
+    };
+    let Some(latest) = parse_version(latest) else {
+        return UpdateType::Unknown;
+    };
+
+    // A stable current version is never "upgraded" to a prerelease.
+    if latest.pre != Prerelease::EMPTY && base.pre == Prerelease::EMPTY {
+        return UpdateType::Unknown;
+    }
+
+    if latest == base {
+        return UpdateType::UpToDate;
+    }
+    if latest < base {
+        return UpdateType::Unknown;
+    }
+
+    if latest.major != base.major {
+        return UpdateType::Breaking;
+    }
+
+    if latest.minor != base.minor {
+        return if requirement_allows(current, &latest) {
+            UpdateType::Safe
+        } else {
+            UpdateType::AtRisk
+        };
+    }
+
+    UpdateType::Safe
+}
+
+/// Build the classified DTO for `dependency` given its resolved `latest`.
+pub fn classify(dependency: &ParsedDependency, latest: Option<&str>) -> ClassifiedDependency {
+    let update_type = latest.map_or(UpdateType::Unknown, |latest| {
+        classify_update(&dependency.current_version, latest)
+    });
+
+    ClassifiedDependency {
+        name: dependency.name.clone(),
+        ecosystem: dependency.ecosystem,
+        current_version: dependency.current_version.clone(),
+        latest_version: latest.map(str::to_string),
+        update_type,
+        manifest_path: dependency.manifest_path.clone(),
+        is_dev_dependency: dependency.is_dev_dependency,
+        ai_summary: None,
+    }
+}
+
+/// Pick the highest stable (non-prerelease) version from `versions`.
+///
+/// Used by registry clients so the upgrade target defaults to the latest stable
+/// release rather than a prerelease.
+pub fn latest_stable<'a, I>(versions: I) -> Option<String>
+where
+    I: IntoIterator<Item = &'a str>,
+{
+    versions
+        .into_iter()
+        .filter_map(parse_version)
+        .filter(|version| version.pre == Prerelease::EMPTY)
+        .max()
+        .map(|version| version.to_string())
+}
+
+/// Whether the declared `requirement` permits `version`.
+fn requirement_allows(requirement: &str, version: &Version) -> bool {
+    VersionReq::parse(requirement.trim())
+        .map(|req| req.matches(version))
+        .unwrap_or(false)
+}
+
+/// Parse a version string leniently, padding partial `X` and `X.Y` forms.
+fn parse_version(raw: &str) -> Option<Version> {
+    let trimmed = raw.trim();
+    if trimmed.is_empty() {
+        return None;
+    }
+    if let Ok(version) = Version::parse(trimmed) {
+        return Some(version);
+    }
+
+    let (core, pre) = match trimmed.split_once('-') {
+        Some((core, pre)) => (core, Some(pre)),
+        None => (trimmed, None),
+    };
+    let mut parts: Vec<&str> = core.split('.').collect();
+    if parts.len() >= 3 {
+        // Three components but still unparseable: not a version we understand.
+        return None;
+    }
+    while parts.len() < 3 {
+        parts.push("0");
+    }
+
+    let padded = match pre {
+        Some(pre) => format!("{}.{}.{}-{}", parts[0], parts[1], parts[2], pre),
+        None => format!("{}.{}.{}", parts[0], parts[1], parts[2]),
+    };
+    Version::parse(&padded).ok()
+}
+
+/// Extract a concrete version from a declared value such as `^1.2.3`, `~1.2`,
+/// `=1.2.3`, `1.2.3`, or `1.2`.
+///
+/// A non-version declared value (`latest`, `*`, `x`) has no base version and
+/// yields `None`, so it classifies as [`UpdateType::Unknown`].
+fn declared_version(raw: &str) -> Option<Version> {
+    let mut text = raw.trim();
+
+    let lowered = text.to_ascii_lowercase();
+    if matches!(lowered.as_str(), "" | "*" | "x" | "latest") {
+        return None;
+    }
+
+    text = text.trim_start_matches(['^', '~', '=', '>', '<', ' ']);
+    let token = text.split([',', ' ']).next().unwrap_or(text);
+    let cleaned = token.replace(['x', 'X', '*'], "0");
+    parse_version(&cleaned)
+}

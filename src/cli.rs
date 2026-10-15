@@ -32,17 +32,22 @@ pub struct ScanArgs {
     #[arg(default_value = ".")]
     pub path: PathBuf,
 
-    /// Enable AI-driven changelog analysis (arrives in a later phase).
+    /// Enable AI-driven changelog summaries (templated until the Phase 5 AI
+    /// module; live providers are detected from the environment).
     #[arg(long)]
     pub ai: bool,
 
-    /// Path for the generated report (arrives in a later phase).
+    /// Path for the generated report (arrives in Phase 4).
     #[arg(short, long, default_value = "report.html")]
     pub output: PathBuf,
 
     /// Output format for scan results.
     #[arg(long, value_enum, default_value_t = OutputFormat::Html)]
     pub format: OutputFormat,
+
+    /// Skip registry lookups and classify from local manifest constraints only.
+    #[arg(long, alias = "no-fetch")]
+    pub offline: bool,
 
     /// Emit verbose (debug-level) logging.
     #[arg(short, long)]
