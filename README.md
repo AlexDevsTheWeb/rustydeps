@@ -1,2 +1,3 @@
-# rustydeps
-A fast, parallel Rust CLI tool that scans local repositories for dependency manifests, evaluates SemVer updates across registries, and generates interactive HTML reports with optional AI-powered changelog summaries.
+**RustyDeps** is a lightning-fast, cross-platform CLI utility built in Rust that helps fullstack developers monitor and manage dependencies across multiple local repositories simultaneously.
+
+It recursively scans project directories while respecting `.gitignore`, queries official package registries concurrently, classifies version jumps into **Safe**, **At-Risk**, and **Breaking Changes**, and outputs a modern, interactive HTML dashboard—with optional AI-driven release notes analysis.
