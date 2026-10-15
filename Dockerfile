@@ -32,9 +32,18 @@ RUN mkdir -p src \
 
 # Real sources. `templates/` is a build-time input only: Askama embeds the
 # report template in the binary, so nothing is read from disk at run time.
+#
+# `touch` is load-bearing, not decoration: the stub `src/main.rs` from the layer
+# above is newer than the sources `COPY` preserves from the build context, so
+# cargo's mtime fingerprints would consider the crate up to date, skip the
+# rebuild and leave the stub binary — a `rustydeps` that prints nothing and
+# exits 0. The `--version` assertion turns any recurrence of that into a build
+# failure instead of a silently empty image.
 COPY src ./src
 COPY templates ./templates
-RUN cargo build --release --locked
+RUN touch src/main.rs \
+ && cargo build --release --locked \
+ && ./target/release/rustydeps --version | grep -q '^rustydeps '
 
 # ---------------------------------------------------------------------------
 # Stage 2 — runtime
