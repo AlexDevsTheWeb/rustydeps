@@ -290,4 +290,43 @@ link in the release-automation implementation report's MR section.
 
 Validation: OKF validator PASSED (0 errors, 0 warnings).
 
+## 2026-10-15 — Docker image & CI publishing
+
+Applied `doc/raw/2026-10-15/opencode-prompt-08-issue15-docker.md` (issue #15,
+"publish an official Docker image for use in CI pipelines"):
+
+- `Dockerfile` (new) — `rust:1-alpine` builder (`musl-dev`, `openssl-dev`,
+  `pkgconf`; dependency-graph layer compiled against a stub `main.rs`, then
+  `src/` and `templates/`) and an `alpine:3` runtime
+  (`ca-certificates`, `libssl3`, `libgcc`) with
+  `ENTRYPOINT ["rustydeps"]`, `CMD ["scan", "."]`, `WORKDIR /workspace` and OCI
+  labels.
+- `.dockerignore` (new) — keeps the build context to `Cargo.toml`,
+  `Cargo.lock`, `src/` and `templates/`.
+- `.github/workflows/docker.yml` (new) — builds on `main` pushes, `v*` tags and
+  PRs to `main`; QEMU + Buildx; GHCR login via `GITHUB_TOKEN`; publishes
+  `linux/amd64` + `linux/arm64` tagged `latest`/branch/semver, and on PRs loads
+  a single-platform image and smoke-tests it instead of pushing.
+- `README.md` — Docker workflow badge, a `## Docker` section (run commands,
+  GitLab CI and GitHub Actions snippets, image notes), and a *Releasing* note
+  that a `v*` tag publishes the image too.
+- Added `features/docker-image/` with [[docker-image]] (feature page) and its
+  implementation report; updated [[index]].
+
+Two brief specifics changed and are documented in [[docker-image]]: the runtime
+base is the rolling `alpine:3` rather than `alpine:3.19` (past its release
+window, and it keeps the builder and runtime on the same Alpine release), and
+distroless was rejected because the issue requires a shell in the job image.
+The runtime OpenSSL libraries were kept because `reqwest` uses `native-tls` on
+Linux.
+
+Validation: `cargo fmt --all --check` clean; `cargo clippy --all-targets -- -D
+warnings` clean; `cargo test` 85 passed; `cargo build --release --locked`
+succeeds; the smoke-test commands run green against the local release binary;
+`cargo tree --target x86_64-unknown-linux-gnu -i openssl-sys` confirms the
+OpenSSL dependency; `docker.yml` parses as YAML and both `run:` blocks pass
+`bash -n`; OKF validator PASSED (0 errors, 0 warnings). No container runtime is
+installed on the development machine, so the image build itself is first
+exercised by the new workflow.
+
 
