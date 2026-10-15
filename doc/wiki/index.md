@@ -39,6 +39,7 @@ and produces an interactive HTML report with optional AI changelog summaries.
 | [[phase-4-html-report]] | Self-contained interactive HTML report: project cards, risk dots, inline drawer, filters, and update commands; [implementation report](features/phase-4-html-report/implementation-report.md). |
 | [[phase-5-ecosystems]] | PyPI, Go, and Composer parsers and registry clients behind the existing traits; [implementation report](features/phase-5-ecosystems/implementation-report.md). |
 | [[release-automation]] | Tag-triggered GitHub Actions release pipeline (Linux/macOS binaries) and the full README; [implementation report](features/release-automation/implementation-report.md). |
+| [[docker-image]] | Multi-stage Alpine `Dockerfile`, `.dockerignore`, and the GHCR multi-arch build/publish workflow for CI usage; [implementation report](features/docker-image/implementation-report.md). |
 
 ## Source documents
 
@@ -55,6 +56,10 @@ and produces an interactive HTML report with optional AI changelog summaries.
   implemented by [[phase-5-ecosystems]].
 - `doc/raw/2026-10-15/2026-10-15-phase7-release.md` — the release/README brief
   implemented by [[release-automation]].
+- `doc/raw/2026-10-15/opencode-prompt-08-issue15-docker.md` — the Docker image
+  and GHCR publishing brief (issue #15) implemented by [[docker-image]].
+- `doc/raw/2026-10-15/2026-10-15-issue15-docker.md` — development report for the
+  Docker work.
 
 ## Conventions
 

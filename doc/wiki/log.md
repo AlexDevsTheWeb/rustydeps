@@ -290,4 +290,111 @@ link in the release-automation implementation report's MR section.
 
 Validation: OKF validator PASSED (0 errors, 0 warnings).
 
+## 2026-10-15 — Docker image & CI publishing
+
+Applied `doc/raw/2026-10-15/opencode-prompt-08-issue15-docker.md` (issue #15,
+"publish an official Docker image for use in CI pipelines"):
+
+- `Dockerfile` (new) — `rust:1-alpine` builder (`musl-dev`, `openssl-dev`,
+  `pkgconf`; dependency-graph layer compiled against a stub `main.rs`, then
+  `src/` and `templates/`) and an `alpine:3` runtime
+  (`ca-certificates`, `libssl3`, `libgcc`) with
+  `ENTRYPOINT ["rustydeps"]`, `CMD ["scan", "."]`, `WORKDIR /workspace` and OCI
+  labels.
+- `.dockerignore` (new) — keeps the build context to `Cargo.toml`,
+  `Cargo.lock`, `src/` and `templates/`.
+- `.github/workflows/docker.yml` (new) — builds on `main` pushes, `v*` tags and
+  PRs to `main` and `development`; QEMU + Buildx; GHCR login via `GITHUB_TOKEN`; publishes
+  `linux/amd64` + `linux/arm64` tagged `latest`/branch/semver, and on PRs loads
+  a single-platform image and smoke-tests it instead of pushing.
+- `README.md` — Docker workflow badge, a `## Docker` section (run commands,
+  GitLab CI and GitHub Actions snippets, image notes), and a *Releasing* note
+  that a `v*` tag publishes the image too.
+- Added `features/docker-image/` with [[docker-image]] (feature page) and its
+  implementation report; updated [[index]].
+
+Two brief specifics changed and are documented in [[docker-image]]: the runtime
+base is the rolling `alpine:3` rather than `alpine:3.19` (past its release
+window, and it keeps the builder and runtime on the same Alpine release), and
+distroless was rejected because the issue requires a shell in the job image.
+The runtime OpenSSL libraries were kept because `reqwest` uses `native-tls` on
+Linux.
+
+Validation: `cargo fmt --all --check` clean; `cargo clippy --all-targets -- -D
+warnings` clean; `cargo test` 85 passed; `cargo build --release --locked`
+succeeds; the smoke-test commands run green against the local release binary;
+`cargo tree --target x86_64-unknown-linux-gnu -i openssl-sys` confirms the
+OpenSSL dependency; `docker.yml` parses as YAML and both `run:` blocks pass
+`bash -n`; OKF validator PASSED (0 errors, 0 warnings). No container runtime is
+installed on the development machine, so the image build itself is first
+exercised by the new workflow.
+
+## 2026-10-15 — Docker image draft PR opened
+
+Opened draft PR #16 (`feat/docker-support` → `development`) and recorded the
+link in the docker-image implementation report's MR section. The PR body lists
+the unverified gates, the two brief deviations (rolling `alpine:3`, distroless
+rejected), and the deferred work.
+
+Validation: OKF validator PASSED (0 errors, 0 warnings).
+
+## 2026-10-15 — Docker build test on PRs into `development`
+
+Corrected the trigger for the new workflow: the pull-request filter was
+`main`-only, but feature branches integrate into `development` in this
+repository, so the image build test would not have run on the PR that adds it.
+`.github/workflows/docker.yml` now lists `branches: [main, development]` for
+`pull_request`, and its header comment no longer claims pull requests build both
+architectures (they build `linux/amd64` and load it for the smoke test). Push
+triggers are unchanged: `main` plus `v*` tags, so `latest` still comes from the
+default branch.
+
+Also corrected in the same step: [[docker-image]] (trigger prose and the event
+table), the docker-image implementation report, the `log.md` entry above, and
+`doc/raw/2026-10-15/2026-10-15-issue15-docker.md` (deviation 5 plus a correction
+note; the raw correction is flagged inline because raw documents are otherwise
+immutable).
+
+Validation: workflow YAML parses and both `run:` blocks still pass `bash -n`;
+OKF validator PASSED (0 errors, 0 warnings).
+
+## 2026-10-15 — Docker image verified in CI; two defects found and fixed
+
+The PR's Docker workflow was exercised end to end, which caught two defects that
+would otherwise have shipped a non-functional image:
+
+1. **Run 38800896598 (failed) — the stub binary shipped as `rustydeps`.** The
+   strengthened smoke test reported an empty `--version`. The build log showed
+   `[builder 8/8] RUN cargo build --release --locked` finishing in 0.14 s with no
+   recompile: cargo's mtime freshness check treats the in-image stub
+   `src/main.rs` as newer than the sources `COPY` preserves, so the real crate
+   was never built and `fn main() {}` was copied into the runtime stage.
+2. **Run 38801611324 (failed) — `ld: cannot find -lssl`.** With the crate
+   finally compiling, the link failed because `x86_64-unknown-linux-musl` links
+   statically by default (`crt-static`) and therefore needs `libssl.a`. The stub
+   had hidden this: unused crates are not linked.
+
+Fixes: `touch src/main.rs` plus a build-time
+`./target/release/rustydeps --version | grep -q '^rustydeps '` assertion;
+`openssl-libs-static` added to the builder (Alpine builds OpenSSL with `no-zlib`,
+per aports `main/openssl/APKBUILD`, so no `-lz`); the runtime stage reduced to
+`ca-certificates` because the static binary carries libc, libgcc and OpenSSL
+internally. The smoke test was also rewritten to assert on container output
+rather than trust a green step.
+
+The mtime-skip mechanism was reproduced locally in a scratch crate. Files
+changed: `Dockerfile`, `.github/workflows/docker.yml`, `.dockerignore`,
+[[docker-image]] (components, decisions, verification), its implementation
+report, and `doc/raw/2026-10-15/2026-10-15-issue15-docker.md`.
+
+**Run 38801998432 (PR #16) is green**: the build compiles the crate and passes
+its assertion, and the smoke test reports `container reports: rustydeps 0.1.0`
+and `report written through the mount: 65482 bytes` (report asserted non-empty
+HTML). Unverified: the `linux/arm64` leg and a real GHCR push, which only run on
+`main`/tag events.
+
+Validation: workflow YAML parses and all `run:` blocks pass `bash -n`;
+`cargo fmt`/`clippy`/`test` (85) unaffected; OKF validator PASSED (0 errors,
+0 warnings).
+
 
