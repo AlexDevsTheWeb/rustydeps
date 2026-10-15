@@ -260,6 +260,9 @@ fn ecosystem_label(ecosystem: Ecosystem) -> &'static str {
     match ecosystem {
         Ecosystem::Cargo => "Cargo",
         Ecosystem::Npm => "npm",
+        Ecosystem::Pypi => "PyPI",
+        Ecosystem::Go => "Go",
+        Ecosystem::Composer => "Composer",
     }
 }
 
@@ -342,5 +345,8 @@ fn update_command(ecosystem: Ecosystem, name: &str, latest: &str) -> String {
     match ecosystem {
         Ecosystem::Cargo => format!("cargo update -p {name} --precise {latest}"),
         Ecosystem::Npm => format!("npm install {name}@{latest}"),
+        Ecosystem::Pypi => format!("pip install {name}=={latest}"),
+        Ecosystem::Go => format!("go get {name}@{latest}"),
+        Ecosystem::Composer => format!("composer require {name}:{latest}"),
     }
 }

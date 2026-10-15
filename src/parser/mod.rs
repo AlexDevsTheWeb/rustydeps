@@ -6,7 +6,10 @@
 //! (PyPI, Go, Composer) are added without touching it.
 
 pub mod cargo;
+pub mod composer;
+pub mod go;
 pub mod npm;
+pub mod pypi;
 
 use std::path::PathBuf;
 
@@ -68,9 +71,15 @@ pub trait PackageParser: Send + Sync {
     fn parse(&self, manifest: &DiscoveredManifest) -> Result<Vec<ParsedDependency>, ParserError>;
 }
 
-/// The parsers RustyDeps ships in Phase 2, in priority order.
+/// The parsers RustyDeps ships, in priority order.
 pub fn default_parsers() -> Vec<Box<dyn PackageParser>> {
-    vec![Box::new(cargo::CargoParser), Box::new(npm::NpmParser)]
+    vec![
+        Box::new(cargo::CargoParser),
+        Box::new(npm::NpmParser),
+        Box::new(pypi::PypiParser),
+        Box::new(go::GoParser),
+        Box::new(composer::ComposerParser),
+    ]
 }
 
 /// Result of parsing a batch of manifests.
@@ -178,5 +187,26 @@ mod tests {
         assert_eq!(outcome.failures.len(), 1);
         assert_eq!(outcome.dependencies.len(), 1);
         assert_eq!(outcome.dependencies[0].name, "left-pad");
+    }
+
+    #[test]
+    fn every_manifest_type_has_a_parser() {
+        let parsers = default_parsers();
+        let all = [
+            (ManifestType::CargoToml, "Cargo.toml"),
+            (ManifestType::PackageJson, "package.json"),
+            (ManifestType::PyprojectToml, "pyproject.toml"),
+            (ManifestType::RequirementsTxt, "requirements.txt"),
+            (ManifestType::GoMod, "go.mod"),
+            (ManifestType::ComposerJson, "composer.json"),
+        ];
+
+        for (manifest_type, name) in all {
+            let manifest = manifest(PathBuf::from(name), manifest_type);
+            assert!(
+                parsers.iter().any(|parser| parser.can_parse(&manifest)),
+                "no parser claims {name}"
+            );
+        }
     }
 }

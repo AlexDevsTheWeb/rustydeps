@@ -16,6 +16,12 @@ pub enum Ecosystem {
     Cargo,
     /// Node packages published to <https://registry.npmjs.org>.
     Npm,
+    /// Python packages published to <https://pypi.org>.
+    Pypi,
+    /// Go modules resolved through <https://proxy.golang.org>.
+    Go,
+    /// PHP packages published to <https://packagist.org>.
+    Composer,
 }
 
 impl Ecosystem {
@@ -24,6 +30,9 @@ impl Ecosystem {
         match self {
             Self::Cargo => "cargo",
             Self::Npm => "npm",
+            Self::Pypi => "pypi",
+            Self::Go => "go",
+            Self::Composer => "composer",
         }
     }
 }
@@ -79,9 +88,16 @@ mod tests {
     fn ecosystem_serializes_to_lowercase_labels() {
         assert_eq!(Ecosystem::Cargo.to_string(), "cargo");
         assert_eq!(Ecosystem::Npm.to_string(), "npm");
+        assert_eq!(Ecosystem::Pypi.to_string(), "pypi");
+        assert_eq!(Ecosystem::Go.to_string(), "go");
+        assert_eq!(Ecosystem::Composer.to_string(), "composer");
         assert_eq!(
             serde_json::to_string(&Ecosystem::Npm).expect("serialize"),
             "\"npm\""
+        );
+        assert_eq!(
+            serde_json::to_string(&Ecosystem::Pypi).expect("serialize"),
+            "\"pypi\""
         );
     }
 
