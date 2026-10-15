@@ -6,7 +6,7 @@ status: active
 version: 0.1.0
 license: CC-BY-4.0
 created: 2026-10-14
-updated: 2026-10-14
+updated: 2026-10-15
 tags: [log, history]
 ---
 
@@ -68,5 +68,27 @@ Documented the finalized HTML report design produced by the Stitch UI iterations
 - This entry.
 
 Validation: OKF validator PASSED (0 errors, 0 warnings).
+
+## 2026-10-15 — Phase 2: parsers, registry clients, and CLI wiring
+
+Implemented the Phase 2 brief
+(`doc/raw/2026-10-15-phase-2/2026-10-15-phase2.md`):
+
+- Added the feature subfolder `features/phase-2-parsers-registry/` with
+  [[phase-2-parsers-registry]] (feature page) and [[implementation-report]].
+- `src/parser/` — the `PackageParser` trait, `CargoParser`, `NpmParser`, the
+  `ParsedDependency` DTO, and the failure-tolerant `parse_manifests` driver.
+- `src/registry/` — the `RegistryClient` trait, `CratesIoClient`,
+  `NpmRegistryClient`, and the bounded `fetch_latest_versions` helper.
+- `src/model.rs` — `Ecosystem`. `src/main.rs` — `scan` now parses and resolves,
+  printing a table or JSON summary. `Cargo.toml` — added `toml`, `reqwest`,
+  and `futures`.
+- Updated [[architecture]] (parser and registry modules marked implemented),
+  [[roadmap]] (Phase 2 ✅, Phase 3 next), and [[index]] (feature row and Phase 2
+  source document).
+
+Validation: `cargo fmt --all --check` clean; `cargo clippy --all-targets -- -D
+warnings` clean; `cargo test` 28 passed; OKF validator PASSED (0 errors,
+0 warnings).
 
 

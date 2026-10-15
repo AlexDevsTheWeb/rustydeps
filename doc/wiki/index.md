@@ -6,7 +6,7 @@ status: active
 version: 0.1.0
 license: CC-BY-4.0
 created: 2026-10-14
-updated: 2026-10-14
+updated: 2026-10-15
 tags: [index, rustydeps, llm-wiki]
 ---
 
@@ -30,11 +30,19 @@ and produces an interactive HTML report with optional AI changelog summaries.
 | [[okf-compliance]] | Open formats, open licensing, metadata traceability, and how to validate this wiki. |
 | [[log]] | Append-only history of wiki changes. |
 
+## Features
+
+| Page | What it covers |
+|------|----------------|
+| [[phase-2-parsers-registry]] | Manifest parsers (`PackageParser`, Cargo, npm) and the crates.io/npm registry clients; see [[implementation-report]]. |
+
 ## Source documents
 
 - `doc/raw/rustydeps-spec.md` — core architectural requirements.
 - `doc/raw/2026-10-14-scaffolding/2026-10-14-scaffolding.md` — the scaffolding
   task that created this wiki.
+- `doc/raw/2026-10-15-phase-2/2026-10-15-phase2.md` — the Phase 2 brief
+  implemented by [[phase-2-parsers-registry]].
 
 ## Conventions
 
