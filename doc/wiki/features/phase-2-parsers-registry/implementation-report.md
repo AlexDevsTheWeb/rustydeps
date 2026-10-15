@@ -57,8 +57,7 @@ package's latest published version, degrading to `unknown` on lookup failure.
 ## Blocked
 
 None. The brief's "Draft PR #3" was inaccurate — PR #3 already exists (the
-merged HTML report UI spec), so this work opens the next draft PR number
-instead.
+merged HTML report UI spec), so this work was opened as draft PR #4 instead.
 
 ## Verification
 
@@ -74,8 +73,8 @@ instead.
 
 ## MR
 
-Draft PR into `development` from `feat/phase-2` (opened after this report; see
-the PR description for the link).
+Draft PR #4 into `development` from `feat/phase-2`:
+<https://github.com/AlexDevsTheWeb/rustydeps/pull/4>.
 
 ## Related
 

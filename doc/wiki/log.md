@@ -91,4 +91,11 @@ Validation: `cargo fmt --all --check` clean; `cargo clippy --all-targets -- -D
 warnings` clean; `cargo test` 28 passed; OKF validator PASSED (0 errors,
 0 warnings).
 
+## 2026-10-15 — Phase 2 draft PR opened
+
+Opened draft PR #4 (`feat/phase-2` → `development`) and recorded the link in
+[[implementation-report]]'s MR section.
+
+Validation: OKF validator PASSED (0 errors, 0 warnings).
+
 
