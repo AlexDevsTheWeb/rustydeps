@@ -72,8 +72,8 @@ work opens the next draft PR number.
 
 ## MR
 
-Draft PR into `development` from `feat/phase-3` (see the PR description for the
-link).
+Draft PR #6 into `development` from `feat/phase-3`:
+<https://github.com/AlexDevsTheWeb/rustydeps/pull/6>.
 
 ## Related
 
