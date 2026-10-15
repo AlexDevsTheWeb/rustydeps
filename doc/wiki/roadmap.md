@@ -44,7 +44,7 @@ the npm registry (`src/registry/`), wired into `scan`. A malformed manifest or
 a failed registry lookup degrades gracefully instead of aborting the run. Exit
 criteria met: a scan parses Cargo and npm dependencies and resolves each one's
 latest published version. See [[phase-2-parsers-registry]] and
-`doc/raw/2026-10-15-phase-2/2026-10-15-phase2.md`.
+`doc/raw/2026-10-15/2026-10-15-phase2.md`.
 
 ## Phase 3 — Unified DTO & SemVer Logic
 

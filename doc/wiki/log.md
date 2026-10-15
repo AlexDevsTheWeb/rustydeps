@@ -98,4 +98,20 @@ Opened draft PR #4 (`feat/phase-2` → `development`) and recorded the link in
 
 Validation: OKF validator PASSED (0 errors, 0 warnings).
 
+## 2026-10-15 — Raw documents reorganized; wiki references repointed
+
+Consolidated the dated raw inputs under `doc/raw/2026-10-15/` and repointed
+the wiki paths that named the old locations:
+
+- `doc/raw/2026-10-15-phase-2/2026-10-15-phase2.md` and
+  `doc/raw/stitch/opencode-prompt-wiki-html-spec.md` moved into
+  `doc/raw/2026-10-15/`; the superseded Stitch iteration prompts were removed.
+  A new Phase 3 brief (`doc/raw/2026-10-15/2026-10-15-phase3.md`) was added.
+- Updated [[html-report-spec]] and [[index]] to the new prompt/Phase 2 paths,
+  and [[roadmap]] and [[implementation-report]] to the new Phase 2 path.
+- Earlier log entries that name the old paths are left unchanged: this log is
+  append-only, so those remain a faithful record of where the files lived then.
+
+Validation: OKF validator PASSED (0 errors, 0 warnings).
+
 

@@ -15,7 +15,7 @@ tags: [implementation-report, phase-2]
 ## Summary
 
 The raw brief
-`doc/raw/2026-10-15-phase-2/2026-10-15-phase2.md` asked for a parser subsystem
+`doc/raw/2026-10-15/2026-10-15-phase2.md` asked for a parser subsystem
 (`PackageParser` with `CargoParser`/`NpmParser`) and asynchronous registry
 clients (crates.io and npm) wired into `scan`. All of that shipped on branch
 `feat/phase-2`: the CLI now parses Cargo and npm dependencies and resolves each
