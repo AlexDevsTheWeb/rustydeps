@@ -6,7 +6,7 @@ status: active
 version: 0.1.0
 license: CC-BY-4.0
 created: 2026-10-14
-updated: 2026-10-14
+updated: 2026-10-15
 tags: [architecture, rust, cli, dto]
 ---
 
@@ -31,8 +31,9 @@ CLI (clap)
 
 ## Modules
 
-> Status: the CLI and filesystem walk below are implemented (Phase 1). The
-> parser, registry, classification, report, and AI modules remain planned.
+> Status: the CLI, filesystem walk, manifest parsers, and registry clients
+> below are implemented (Phases 1–2). The classification, report, and AI
+> modules remain planned.
 
 ### CLI (`src/cli.rs`, `src/main.rs`)
 
@@ -74,23 +75,47 @@ The `PackageParser` trait is the seam that keeps ecosystem support open for
 extension without touching the scanner:
 
 ```rust
-pub trait PackageParser {
+pub trait PackageParser: Send + Sync {
     fn ecosystem(&self) -> Ecosystem;
-    fn can_parse(&self, path: &Path) -> bool;
-    fn parse(&self, path: &Path) -> Result<Vec<Dependency>, ParseError>;
+    fn can_parse(&self, manifest: &DiscoveredManifest) -> bool;
+    fn parse(&self, manifest: &DiscoveredManifest)
+        -> Result<Vec<ParsedDependency>, ParserError>;
 }
 ```
 
-`CargoParser` (`Cargo.toml`) and `NpmParser` (`package.json`) implement it
-first; later phases add `PyPI`, `Go`, and `Composer`.
+`ParsedDependency` carries `name`, `current_version`, `ecosystem`,
+`manifest_path`, and `is_dev_dependency`. A driver, `parse_manifests`, routes
+each discovered manifest to the first parser that claims it; a manifest a
+parser claims but cannot decode is recorded and skipped rather than aborting
+the scan. `CargoParser` (`Cargo.toml`) and `NpmParser` (`package.json`)
+implement the trait first; later phases add `PyPI`, `Go`, and `Composer`.
+
+- **`CargoParser`** decodes `[dependencies]`, `[dev-dependencies]`, and
+  `[workspace.dependencies]`, resolving `dep = { workspace = true }`
+  inheritance. Path- and git-only dependencies are skipped.
+- **`NpmParser`** decodes `dependencies` and `devDependencies`; specs that do
+  not point at `registry.npmjs.org` (`file:`, `link:`, `workspace:`, `npm:`
+  aliases, git/http URLs) are skipped.
 
 ### Registry clients (`src/registry/`)
 
 One async client per registry, built on `reqwest` and driven by a `tokio`
-runtime. Queries run concurrently with bounded concurrency and per-registry
-politeness. A client returns the latest published version (and, for the AI
-module, the release metadata needed to summarize changelogs). Client failures
-degrade to "unknown latest", never abort the whole scan.
+runtime. `RegistryClient` is a native `async fn` trait (no `async-trait`
+dependency, no `dyn` dispatch) with `fetch_latest_version(name)`; the helper
+`fetch_latest_versions` keeps at most `DEFAULT_CONCURRENCY` (10) requests in
+flight using `futures` `buffer_unordered`.
+
+- **`CratesIoClient`** queries `/api/v1/crates/{name}` with the descriptive
+  `User-Agent` crates.io requires and reads `crate.max_version`.
+- **`NpmRegistryClient`** queries `registry.npmjs.org/{name}` (scoped names
+  percent-encoded) and reads `dist-tags.latest`.
+
+Response parsing is split from the HTTP calls into pure
+`parse_crates_io_response` / `parse_npm_response` functions so it is unit
+tested without network access. Client failures (transport error, 404,
+unexpected body) degrade to "unknown latest" and are recorded on the
+dependency; they never abort the whole scan. The AI module's changelog
+metadata is still to come.
 
 ### SemVer classification
 
@@ -116,6 +141,9 @@ relevant changelog/release notes and summarizes breaking changes and migration
 notes. Any failure here is non-fatal — the scan and report still complete.
 
 ## Core DTOs (`src/model.rs`)
+
+`Ecosystem` is implemented (Phase 2); the unified `Dependency` and `UpdateType`
+DTOs arrive in Phase 3.
 
 ```rust
 pub enum Ecosystem { Cargo, Npm /*, PyPI, Go, Composer */ }
@@ -146,5 +174,6 @@ pub enum UpdateType {
 ## Related
 
 - [[roadmap]] — phase plan that builds these modules in order.
+- [[phase-2-parsers-registry]] — the implemented parser and registry clients.
 - [[okf-compliance]] — how this documentation is licensed and validated.
 - [[index]] — knowledge-graph entrypoint.
