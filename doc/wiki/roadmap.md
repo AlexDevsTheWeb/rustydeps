@@ -13,8 +13,8 @@ tags: [roadmap, phases, planning]
 # Roadmap
 
 RustyDeps ships in six incremental phases. Each phase leaves the tool in a
-usable state and maps to modules described in [[architecture]]. Phases 1 and 2
-are complete; Phase 3 is next.
+usable state and maps to modules described in [[architecture]]. Phases 1
+through 3 are complete; Phase 4 is next.
 
 ## Phase status
 
@@ -22,8 +22,8 @@ are complete; Phase 3 is next.
 |---|-------|--------|
 | 1 | Rust Setup & CLI (`clap` + `ignore`) | ✅ Done |
 | 2 | Parsers (Cargo & npm) & Registry HTTP Clients | ✅ Done |
-| 3 | Unified DTO & SemVer Logic | Next |
-| 4 | Interactive HTML Report Engine | Planned |
+| 3 | Unified DTO & SemVer Logic | ✅ Done |
+| 4 | Interactive HTML Report Engine | Next |
 | 5 | AI Changelog Summarizer Module | Planned |
 | 6 | Multi-ecosystem Expansion (PyPI, Go, Composer) | Planned |
 
@@ -46,11 +46,14 @@ criteria met: a scan parses Cargo and npm dependencies and resolves each one's
 latest published version. See [[phase-2-parsers-registry]] and
 `doc/raw/2026-10-15/2026-10-15-phase2.md`.
 
-## Phase 3 — Unified DTO & SemVer Logic
+## Phase 3 — Unified DTO & SemVer Logic ✅
 
-Lock down `Dependency` and `UpdateType`, and implement the pure classifier that
-buckets upgrades into Safe / At-Risk / Breaking. Exit criteria: a fully tested
-classifier driven by the DTOs.
+Locked down `UpdateType` and the `ClassifiedDependency` result DTO, added the
+pure classifier (`Safe` / `AtRisk` / `Breaking` / `UpToDate` / `Unknown`), the
+latest-stable target, the CLI banner, the templated AI summary scaffold, and
+`--offline`/`--no-fetch`. Exit criteria met: a fully tested classifier driven by
+the DTOs (`src/classifier/tests.rs`). See [[phase-3-semver-classifier]] and
+`doc/raw/2026-10-15/2026-10-15-phase3.md`.
 
 ## Phase 4 — Interactive HTML Report Engine
 

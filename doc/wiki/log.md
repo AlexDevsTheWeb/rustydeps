@@ -114,4 +114,31 @@ the wiki paths that named the old locations:
 
 Validation: OKF validator PASSED (0 errors, 0 warnings).
 
+## 2026-10-15 — Phase 3: SemVer classifier, AI summaries, banner, offline mode
+
+Implemented the Phase 3 brief
+(`doc/raw/2026-10-15/2026-10-15-phase3.md`):
+
+- Added the feature subfolder `features/phase-3-semver-classifier/` with
+  [[phase-3-semver-classifier]] (feature page) and its implementation report.
+- `src/model.rs` — `UpdateType` (`Safe`, `AtRisk`, `Breaking`, `UpToDate`,
+  `Unknown`). `src/classifier/` — `classify_update`, `classify`,
+  `ClassifiedDependency`, `latest_stable`, and `tests.rs`.
+- `src/registry/crates_io.rs` — the upgrade target is now the latest stable
+  release (`max_stable_version` → highest stable in `versions` → `max_version`).
+- `src/ai/` — provider detection (`ANTHROPIC_API_KEY`, `OPENAI_API_KEY`,
+  `RUSTYDEPS_AI_ENDPOINT`) and templated summaries; live provider calls are
+  deferred to Phase 5.
+- `src/cli.rs`, `src/main.rs` — the ASCII banner (suppressed for JSON) and the
+  `--offline`/`--no-fetch` flag. `Cargo.toml` — added `semver` and `colored`.
+- Updated [[architecture]] (classifier and AI sections), [[roadmap]] (Phase 3
+  ✅, Phase 4 next), and [[index]] (feature row and Phase 3 source document).
+- The active feature pages and [[index]] now link their implementation reports
+  by relative path instead of `[[implementation-report]]`, which became
+  ambiguous once a second subfolder used that filename.
+
+Validation: `cargo fmt --all --check` clean; `cargo clippy --all-targets -- -D
+warnings` clean; `cargo test` 47 passed; OKF validator PASSED (0 errors,
+0 warnings).
+
 
