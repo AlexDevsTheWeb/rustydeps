@@ -320,3 +320,45 @@ fn surfaces_the_scan_duration() {
     assert_eq!(data.duration_display, "142 ms");
     assert!(data.render().expect("render").contains("142 ms"));
 }
+
+#[test]
+fn maps_ecosystem_labels_and_update_commands() {
+    let cases = [
+        (
+            Ecosystem::Pypi,
+            "PyPI",
+            "requests",
+            "2.31.0",
+            "pip install requests==2.31.0",
+        ),
+        (
+            Ecosystem::Go,
+            "Go",
+            "github.com/gin-gonic/gin",
+            "v1.10.0",
+            "go get github.com/gin-gonic/gin@v1.10.0",
+        ),
+        (
+            Ecosystem::Composer,
+            "Composer",
+            "monolog/monolog",
+            "3.5.0",
+            "composer require monolog/monolog:3.5.0",
+        ),
+    ];
+
+    for (ecosystem, label, name, latest, expected) in cases {
+        let dep = dependency(
+            ecosystem,
+            "proj/manifest",
+            name,
+            "1.0.0",
+            Some(latest),
+            UpdateType::Safe,
+        );
+        let data = ReportData::from_classified(&[dep], &ReportMeta::default());
+        let project = &data.projects[0];
+        assert_eq!(project.ecosystem_label, label);
+        assert_eq!(project.dependencies[0].command, expected);
+    }
+}

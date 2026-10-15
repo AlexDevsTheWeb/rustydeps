@@ -37,6 +37,7 @@ and produces an interactive HTML report with optional AI changelog summaries.
 | [[phase-2-parsers-registry]] | Manifest parsers (`PackageParser`, Cargo, npm) and the crates.io/npm registry clients; [implementation report](features/phase-2-parsers-registry/implementation-report.md). |
 | [[phase-3-semver-classifier]] | SemVer classifier (`Safe`/`AtRisk`/`Breaking`/`UpToDate`/`Unknown`), latest-stable targeting, templated AI summaries, CLI banner, and `--offline` mode; [implementation report](features/phase-3-semver-classifier/implementation-report.md). |
 | [[phase-4-html-report]] | Self-contained interactive HTML report: project cards, risk dots, inline drawer, filters, and update commands; [implementation report](features/phase-4-html-report/implementation-report.md). |
+| [[phase-5-ecosystems]] | PyPI, Go, and Composer parsers and registry clients behind the existing traits; [implementation report](features/phase-5-ecosystems/implementation-report.md). |
 
 ## Source documents
 
@@ -49,6 +50,8 @@ and produces an interactive HTML report with optional AI changelog summaries.
   implemented by [[phase-3-semver-classifier]].
 - `doc/raw/2026-10-15/2026-10-15-phase4.md` — the Phase 4 brief
   implemented by [[phase-4-html-report]].
+- `doc/raw/2026-10-15/2026-10-15-phase5.md` — the Phase 5 brief
+  implemented by [[phase-5-ecosystems]].
 
 ## Conventions
 

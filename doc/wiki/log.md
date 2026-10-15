@@ -204,4 +204,38 @@ warnings` clean; `cargo test` 57 passed; a live scan produced a ~55 KB
 self-contained report with all drawer ids resolving and every JS handler
 defined; OKF validator PASSED (0 errors, 0 warnings).
 
+## 2026-10-15 — Phase 5: PyPI, Go, and Composer ecosystems
+
+Implemented the Phase 5 brief
+(`doc/raw/2026-10-15/2026-10-15-phase5.md`):
+
+- Added the feature subfolder `features/phase-5-ecosystems/` with
+  [[phase-5-ecosystems]] (feature page) and its implementation report.
+- `src/parser/` — `PypiParser` (`pyproject.toml`, `requirements.txt`),
+  `GoParser` (`go.mod`), `ComposerParser` (`composer.json`), registered in
+  `default_parsers()`.
+- `src/registry/` — `PypiClient`, `GoRegistryClient`, `ComposerClient` with
+  pure `parse_*` functions.
+- `src/model.rs` — `Ecosystem` gains `Pypi`, `Go`, `Composer`.
+- `src/classifier/` — `v`-prefixed tags and `!=` specifiers accepted;
+  `latest_stable` returns the winning entry verbatim.
+- `src/main.rs` — a generic `resolve_ecosystem` helper resolves all five
+  ecosystems concurrently. `src/report/mod.rs` — ecosystem labels and update
+  commands for the new ecosystems (no template change).
+- Updated [[architecture]] (parsers + clients), [[roadmap]] (Phase 5 =
+  Multi-ecosystem ✅, Phase 6 = AI summarizer next), and [[index]] (feature row
+  and Phase 5 source document).
+
+Validation: `cargo fmt --all --check` clean; `cargo clippy --all-targets -- -D
+warnings` clean; `cargo test` 83 passed; a live scan resolved all five
+ecosystems and the report rendered PyPI/Go/Composer pills while staying
+self-contained; OKF validator PASSED (0 errors, 0 warnings).
+
+## 2026-10-15 — Phase 5 draft PR opened
+
+Opened draft PR #8 (`feat/phase-5-ecosystems` → `development`) and recorded the
+link in the Phase 5 implementation report's MR section.
+
+Validation: OKF validator PASSED (0 errors, 0 warnings).
+
 

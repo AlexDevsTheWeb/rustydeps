@@ -97,18 +97,19 @@ pub fn classify(dependency: &ParsedDependency, latest: Option<&str>) -> Classifi
 
 /// Pick the highest stable (non-prerelease) version from `versions`.
 ///
-/// Used by registry clients so the upgrade target defaults to the latest stable
-/// release rather than a prerelease.
+/// Returns the winning entry verbatim (so a Go `v1.2.3` or Packagist tag keeps
+/// its original form). Used by registry clients so the upgrade target defaults
+/// to the latest stable release rather than a prerelease.
 pub fn latest_stable<'a, I>(versions: I) -> Option<String>
 where
     I: IntoIterator<Item = &'a str>,
 {
     versions
         .into_iter()
-        .filter_map(parse_version)
-        .filter(|version| version.pre == Prerelease::EMPTY)
-        .max()
-        .map(|version| version.to_string())
+        .filter_map(|raw| parse_version(raw).map(|version| (version, raw)))
+        .filter(|(version, _)| version.pre == Prerelease::EMPTY)
+        .max_by(|(left, _), (right, _)| left.cmp(right))
+        .map(|(_, raw)| raw.trim().to_string())
 }
 
 /// Whether the declared `requirement` permits `version`.
@@ -118,12 +119,25 @@ fn requirement_allows(requirement: &str, version: &Version) -> bool {
         .unwrap_or(false)
 }
 
-/// Parse a version string leniently, padding partial `X` and `X.Y` forms.
+/// Parse a version string leniently, padding partial `X` and `X.Y` forms and
+/// accepting a leading `v` (as used by Go modules and Packagist tags).
 fn parse_version(raw: &str) -> Option<Version> {
     let trimmed = raw.trim();
     if trimmed.is_empty() {
         return None;
     }
+
+    // Drop a leading `v`/`V` when it prefixes a digit (`v1.2.3`).
+    let bytes = trimmed.as_bytes();
+    let trimmed = if bytes.len() >= 2
+        && (bytes[0] == b'v' || bytes[0] == b'V')
+        && bytes[1].is_ascii_digit()
+    {
+        &trimmed[1..]
+    } else {
+        trimmed
+    };
+
     if let Ok(version) = Version::parse(trimmed) {
         return Some(version);
     }
@@ -161,7 +175,7 @@ fn declared_version(raw: &str) -> Option<Version> {
         return None;
     }
 
-    text = text.trim_start_matches(['^', '~', '=', '>', '<', ' ']);
+    text = text.trim_start_matches(['^', '~', '=', '>', '<', '!', ' ']);
     let token = text.split([',', ' ']).next().unwrap_or(text);
     let cleaned = token.replace(['x', 'X', '*'], "0");
     parse_version(&cleaned)

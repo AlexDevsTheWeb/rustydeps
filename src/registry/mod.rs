@@ -4,8 +4,11 @@
 //! [`fetch_latest_versions`], which bounds the number of concurrent in-flight
 //! requests so a large scan stays polite to the registries.
 
+pub mod composer;
 pub mod crates_io;
+pub mod go;
 pub mod npm;
+pub mod pypi;
 
 use futures::stream::{self, StreamExt};
 use thiserror::Error;
