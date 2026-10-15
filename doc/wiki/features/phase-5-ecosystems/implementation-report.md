@@ -74,8 +74,8 @@ None.
 
 ## MR
 
-Draft PR into `development` from `feat/phase-5-ecosystems` (see the PR
-description for the link).
+Draft PR #8 into `development` from `feat/phase-5-ecosystems`:
+<https://github.com/AlexDevsTheWeb/rustydeps/pull/8>.
 
 ## Related
 

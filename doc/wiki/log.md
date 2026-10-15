@@ -231,4 +231,11 @@ warnings` clean; `cargo test` 83 passed; a live scan resolved all five
 ecosystems and the report rendered PyPI/Go/Composer pills while staying
 self-contained; OKF validator PASSED (0 errors, 0 warnings).
 
+## 2026-10-15 — Phase 5 draft PR opened
+
+Opened draft PR #8 (`feat/phase-5-ecosystems` → `development`) and recorded the
+link in the Phase 5 implementation report's MR section.
+
+Validation: OKF validator PASSED (0 errors, 0 warnings).
+
 
