@@ -235,6 +235,27 @@ self-contained; OKF validator PASSED (0 errors, 0 warnings).
 
 Opened draft PR #8 (`feat/phase-5-ecosystems` → `development`) and recorded the
 link in the Phase 5 implementation report's MR section.
+## 2026-10-15 — Auto-open the HTML report in the default browser
+
+Applied `doc/raw/2026-10-15/opencode-prompt-auto-open.md`:
+
+- `src/cli.rs` — a `--no-open` flag on `scan`; the report opens by default on
+  `--format html`.
+- `src/main.rs` — after writing the report and printing the path/`file://` URL,
+  `open::that` launches it; success logs at info, failure logs a warning and
+  never fails the scan. `--format json` and `--no-open` skip the call.
+- `Cargo.toml` — added the `open` crate (5.x).
+- Updated [[architecture]] (CLI flags and behaviour).
+
+Validation: `cargo fmt --all --check` clean; `cargo clippy --all-targets -- -D
+warnings` clean; `cargo test` 59 passed; live checks confirmed `--no-open`
+suppresses the launch, the default opens and logs success, `--format json` does
+not open, and the scan still exits 0; OKF validator PASSED (0 errors,
+0 warnings).
+
+## 2026-10-15 — Auto-open draft PR opened
+
+Opened draft PR #9 (`feat/auto-open` → `development`).
 
 Validation: OKF validator PASSED (0 errors, 0 warnings).
 

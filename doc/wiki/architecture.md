@@ -39,14 +39,16 @@ CLI (clap)
 
 Built with `clap` (derive pattern). The `scan` subcommand takes a root `path`
 (default `.`), `--ai`, `--output`/`-o` (default `rustydeps-report.html`),
-`--format html|json`, `--offline`/`--no-fetch`, and `--verbose`/`-v`. `main` is
-`#[tokio::main]` and returns `anyhow::Result`; it initializes
+`--format html|json`, `--offline`/`--no-fetch`, `--no-open`, and `--verbose`/`-v`.
+`main` is `#[tokio::main]` and returns `anyhow::Result`; it initializes
 `tracing-subscriber` (logs go to stderr so stdout stays clean for `--format
 json`) and dispatches the subcommand. On text runs it prints the "Full Block
 Solid" ASCII banner (Rust-orange logo, cyan version, grey tagline); the banner
 is suppressed for `--format json` and its colours drop out when stdout is not a
 terminal. `--offline` skips registry lookups. For `--format html` it writes the
-self-contained report to `--output` and prints a `file://` URL to open it.
+self-contained report to `--output`, prints a `file://` URL, and (unless
+`--no-open`) launches it in the default browser via the `open` crate — a failure
+to open is logged as a warning and never fails the scan.
 
 ### Filesystem walk (`src/scanner.rs`)
 

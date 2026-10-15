@@ -157,6 +157,20 @@ async fn run_scan(args: ScanArgs) -> Result<()> {
             println!();
             println!("HTML report written to {}", args.output.display());
             println!("Open it in your browser: file://{}", absolute.display());
+
+            if !args.no_open {
+                match open::that(&absolute) {
+                    Ok(()) => info!(
+                        report = %absolute.display(),
+                        "opened the report in the default browser"
+                    ),
+                    Err(error) => warn!(
+                        %error,
+                        report = %absolute.display(),
+                        "could not open the report in the browser"
+                    ),
+                }
+            }
         }
     }
 
