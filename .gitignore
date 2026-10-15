@@ -9,6 +9,8 @@
 /reports/
 *.html
 !doc/**/*.html
+# Askama report template (source, not generated output)
+!templates/**/*.html
 
 # Editor / OS noise
 .DS_Store

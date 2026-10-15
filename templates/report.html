@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RustyDeps — Dependency Report</title>
+<style>
+:root {
+  --bg: #09090b;
+  --surface: #18181b;
+  --surface-2: #1f1f23;
+  --border: #27272a;
+  --text: #ffffff;
+  --muted: #a1a1aa;
+  --faint: #71717a;
+  --breaking: #f43f5e;
+  --at-risk: #fbbf24;
+  --safe: #10b981;
+  --mono: "JetBrains Mono", "SF Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  --sans: "Geist Sans", Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--sans);
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+.wrap { max-width: 1140px; margin: 0 auto; padding: 32px 24px 64px; }
+code, pre, .mono { font-family: var(--mono); }
+
+/* Header */
+.report-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 12px 20px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--border);
+}
+.report-title { font-family: var(--mono); font-size: 20px; font-weight: 700; }
+.report-version { color: var(--faint); font-family: var(--mono); font-size: 13px; }
+.report-metrics { margin-left: auto; display: flex; gap: 18px; color: var(--muted); font-size: 13px; }
+.report-metrics b { color: var(--text); font-weight: 600; }
+.risk-summary { display: flex; gap: 16px; font-size: 13px; color: var(--muted); }
+.report-root { width: 100%; color: var(--faint); font-family: var(--mono); font-size: 12px; }
+
+/* Controls */
+.controls {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin: 20px 0;
+  padding: 10px 0;
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
+}
+.search {
+  flex: 1 1 240px;
+  min-width: 200px;
+  padding: 8px 12px;
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-family: var(--mono);
+  font-size: 13px;
+}
+.search::placeholder { color: var(--faint); }
+.pill-group { display: flex; gap: 6px; }
+.filter-pill {
+  padding: 6px 12px;
+  background: var(--surface);
+  color: var(--muted);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  font-size: 12px;
+  cursor: pointer;
+}
+.filter-pill.is-active { color: var(--text); border-color: var(--faint); background: var(--surface-2); }
+.filter-pill[data-risk="breaking"] .dot { color: var(--breaking); }
+.filter-pill[data-risk="at-risk"] .dot { color: var(--at-risk); }
+.filter-pill[data-risk="safe"] .dot { color: var(--safe); }
+.kbd-hint { color: var(--faint); font-size: 12px; }
+kbd {
+  font-family: var(--mono);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 1px 5px;
+  color: var(--muted);
+}
+
+/* Project cards */
+.project-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  margin-bottom: 16px;
+  overflow: hidden;
+}
+.project-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 14px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border);
+}
+.project-name { font-size: 15px; font-weight: 600; margin: 0; }
+.project-path { width: 100%; color: var(--faint); font-family: var(--mono); font-size: 12px; }
+.badges { display: flex; gap: 6px; }
+.eco-badge {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 2px 6px;
+}
+.project-meta { margin-left: auto; display: flex; align-items: center; gap: 14px; }
+.project-total { color: var(--faint); font-size: 12px; }
+.risk-breakdown { display: flex; gap: 12px; font-size: 12px; color: var(--muted); }
+.risk-breakdown .breaking { color: var(--breaking); }
+.risk-breakdown .at-risk { color: var(--at-risk); }
+.risk-breakdown .safe { color: var(--safe); }
+.update-all {
+  background: var(--surface-2);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 6px 12px;
+  font-size: 12px;
+  cursor: pointer;
+}
+.update-all:hover { border-color: var(--faint); }
+.update-all-command { display: block; padding: 0 16px 12px; color: var(--faint); font-size: 12px; overflow-wrap: anywhere; }
+
+/* Dependency rows */
+.dependency-list { list-style: none; margin: 0; padding: 0; }
+.dependency-row { border-top: 1px solid var(--border); }
+.dependency-row:first-child { border-top: none; }
+.dependency-main {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px;
+  cursor: pointer;
+  list-style: none;
+}
+.dependency-main::-webkit-details-marker { display: none; }
+.package-name { font-family: var(--mono); font-weight: 600; min-width: 160px; overflow-wrap: anywhere; }
+.version-jump { font-family: var(--mono); font-size: 13px; color: var(--faint); }
+.version-jump .current { color: var(--muted); }
+.version-jump .arrow { margin: 0 6px; }
+.version-jump .latest { color: var(--text); }
+.risk { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); }
+.risk-dot { width: 6px; height: 6px; border-radius: 50%; display: inline-block; }
+.risk-breaking .risk-dot { background: var(--breaking); }
+.risk-at-risk .risk-dot { background: var(--at-risk); }
+.risk-safe .risk-dot { background: var(--safe); }
+.risk-breaking .risk-label { color: var(--breaking); }
+.risk-at-risk .risk-label { color: var(--at-risk); }
+.risk-safe .risk-label { color: var(--safe); }
+.dev-tag {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--faint);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 1px 5px;
+}
+.ai-tag {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  color: var(--faint);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 1px 5px;
+}
+.ai-summary { color: var(--muted); font-size: 12px; flex: 1 1 auto; }
+.row-actions { margin-left: auto; display: flex; align-items: center; gap: 8px; }
+.copy-button {
+  background: transparent;
+  color: var(--muted);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-size: 12px;
+  cursor: pointer;
+}
+.copy-button:hover { color: var(--text); border-color: var(--faint); }
+.chevron { color: var(--faint); font-size: 11px; }
+.chevron::after { content: "\25B8"; }
+details[open] > .dependency-main .chevron::after { content: "\25BE"; }
+
+/* Drawer */
+.drawer-body { padding: 4px 16px 16px; border-top: 1px dashed var(--border); }
+.drawer-summary { margin: 8px 0 12px; color: var(--muted); font-size: 13px; }
+.drawer-summary.muted { color: var(--faint); }
+.drawer-label { color: var(--faint); font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; }
+.command {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 6px 0 0;
+  padding: 10px 12px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  font-size: 13px;
+  overflow-x: auto;
+}
+
+/* Empty state */
+.empty-state {
+  text-align: center;
+  padding: 48px 16px;
+  color: var(--faint);
+  border: 1px dashed var(--border);
+  border-radius: 10px;
+}
+.empty-state b { display: block; color: var(--muted); font-size: 15px; margin-bottom: 4px; }
+
+.footer { margin-top: 28px; color: var(--faint); font-size: 12px; text-align: center; }
+
+@media (max-width: 720px) {
+  .package-name { min-width: 0; }
+  .ai-summary { display: none; }
+  .report-metrics { margin-left: 0; }
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="report-header">
+    <span class="report-title">RustyDeps</span>
+    <span class="report-version">v{{ version }}</span>
+    <div class="report-metrics">
+      <span><b>{{ project_count }}</b> projects</span>
+      <span><b>{{ dependency_count }}</b> dependencies</span>
+      <span>{{ up_to_date }} up-to-date</span>
+      <span>{{ unknown }} unknown</span>
+      <span>{{ duration_display }}</span>
+    </div>
+    <div class="risk-summary">
+      <span class="breaking" style="color: var(--breaking)">● {{ breaking }} breaking</span>
+      <span class="at-risk" style="color: var(--at-risk)">● {{ at_risk }} at-risk</span>
+      <span class="safe" style="color: var(--safe)">● {{ safe }} safe</span>
+    </div>
+    {% if scanned_root != "" %}<div class="report-root">scanned: {{ scanned_root }}</div>{% endif %}
+  </header>
+
+  <div class="controls">
+    <input id="search" class="search" type="search" placeholder="Filter packages... /" aria-label="Filter packages">
+    <div class="pill-group" role="group" aria-label="Filter by risk">
+      <button class="filter-pill is-active" data-risk="all">All</button>
+      <button class="filter-pill" data-risk="breaking"><span class="dot">●</span> Breaking</button>
+      <button class="filter-pill" data-risk="at-risk"><span class="dot">●</span> At-Risk</button>
+      <button class="filter-pill" data-risk="safe"><span class="dot">●</span> Safe</button>
+    </div>
+    <span class="kbd-hint">press <kbd>/</kbd> to search</span>
+  </div>
+
+  {% for project in projects %}
+  <article class="project-card">
+    <header class="project-header">
+      <h2 class="project-name">{{ project.name }}</h2>
+      <div class="badges">
+        {% for badge in project.ecosystems %}<span class="eco-badge">{{ badge }}</span>{% endfor %}
+      </div>
+      <div class="project-path mono">{{ project.manifest_path }}</div>
+      <div class="project-meta">
+        <span class="project-total">{{ project.total }} deps</span>
+        <div class="risk-breakdown">
+          <span class="breaking">● {{ project.breaking }}</span>
+          <span class="at-risk">● {{ project.at_risk }}</span>
+          <span class="safe">● {{ project.safe }}</span>
+        </div>
+        {% if project.has_update_all %}
+        <button class="update-all copy-button" data-copy="{{ project.update_all_command }}">Update All</button>
+        {% endif %}
+      </div>
+      {% if project.has_update_all %}
+      <code class="update-all-command mono">{{ project.update_all_command }}</code>
+      {% endif %}
+    </header>
+    <ul class="dependency-list">
+      {% for dep in project.dependencies %}
+      <li class="dependency-row" data-risk="{{ dep.risk_class }}" data-name="{{ dep.name }}">
+        <details class="dependency-drawer">
+          <summary class="dependency-main">
+            <span class="package-name">{{ dep.name }}</span>
+            <span class="version-jump">
+              <span class="current">{{ dep.current_version }}</span>
+              <span class="arrow">→</span>
+              <span class="latest">{{ dep.latest_display }}</span>
+            </span>
+            <span class="risk risk-{{ dep.risk_class }}">
+              {% if dep.has_risk_dot %}<span class="risk-dot"></span>{% endif %}
+              <span class="risk-label">{{ dep.risk_label }}</span>
+            </span>
+            {% if dep.is_dev_dependency %}<span class="dev-tag">dev</span>{% endif %}
+            {% if dep.has_ai_summary %}<span class="ai-tag">AI</span><span class="ai-summary">{{ dep.ai_summary }}</span>{% endif %}
+            <span class="row-actions">
+              {% if dep.has_update_command %}<button class="copy-button" data-copy="{{ dep.update_command }}">Copy</button>{% endif %}
+              <span class="chevron"></span>
+            </span>
+          </summary>
+          <div class="drawer-body">
+            <span class="drawer-label">Summary</span>
+            {% if dep.has_ai_summary %}
+            <p class="drawer-summary">{{ dep.ai_summary }}</p>
+            {% else %}
+            <p class="drawer-summary muted">No summary available for this update.</p>
+            {% endif %}
+            {% if dep.has_update_command %}
+            <span class="drawer-label">Update command</span>
+            <pre class="command"><code>{{ dep.update_command }}</code></pre>
+            {% endif %}
+          </div>
+        </details>
+      </li>
+      {% endfor %}
+    </ul>
+  </article>
+  {% endfor %}
+
+  <div id="empty-state" class="empty-state"{% if has_dependencies %} hidden{% endif %}>
+    <b>No dependencies match your filter</b>
+    <span>Clear the search or pick another risk filter.</span>
+  </div>
+
+  {% if !has_dependencies && project_count == 0 %}
+  <div class="empty-state">
+    <b>No dependencies found</b>
+    <span>Point the scan at a directory containing a Cargo.toml or package.json.</span>
+  </div>
+  {% endif %}
+
+  <p class="footer">Generated by RustyDeps v{{ version }} — self-contained, no network required.</p>
+</div>
+<script>
+(function () {
+  var search = document.getElementById('search');
+  var pills = Array.prototype.slice.call(document.querySelectorAll('.filter-pill'));
+  var emptyState = document.getElementById('empty-state');
+  var activeRisk = 'all';
+
+  function matchesRisk(row) {
+    return activeRisk === 'all' || row.getAttribute('data-risk') === activeRisk;
+  }
+
+  function matchesText(row) {
+    var query = (search.value || '').trim().toLowerCase();
+    if (query === '') { return true; }
+    return row.getAttribute('data-name').toLowerCase().indexOf(query) !== -1;
+  }
+
+  function apply() {
+    var rows = Array.prototype.slice.call(document.querySelectorAll('.dependency-row'));
+    var visible = 0;
+    rows.forEach(function (row) {
+      var show = matchesRisk(row) && matchesText(row);
+      row.hidden = !show;
+      if (show) { visible += 1; }
+    });
+    document.querySelectorAll('.project-card').forEach(function (card) {
+      var any = Array.prototype.slice.call(card.querySelectorAll('.dependency-row')).some(function (row) {
+        return !row.hidden;
+      });
+      card.hidden = !any;
+    });
+    if (emptyState) { emptyState.hidden = visible !== 0; }
+  }
+
+  pills.forEach(function (pill) {
+    pill.addEventListener('click', function () {
+      activeRisk = pill.getAttribute('data-risk');
+      pills.forEach(function (other) {
+        other.classList.toggle('is-active', other === pill);
+      });
+      apply();
+    });
+  });
+
+  if (search) {
+    search.addEventListener('input', apply);
+  }
+
+  document.addEventListener('keydown', function (event) {
+    if (event.key === '/' && document.activeElement !== search) {
+      event.preventDefault();
+      search.focus();
+    }
+  });
+
+  document.querySelectorAll('.copy-button').forEach(function (button) {
+    button.addEventListener('click', function (event) {
+      event.preventDefault();
+      event.stopPropagation();
+      var text = button.getAttribute('data-copy') || '';
+      if (navigator.clipboard) { navigator.clipboard.writeText(text); }
+      var original = button.textContent;
+      button.textContent = 'Copied';
+      setTimeout(function () { button.textContent = original; }, 1200);
+    });
+  });
+
+  apply();
+})();
+</script>
+</body>
+</html>

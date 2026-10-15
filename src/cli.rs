@@ -37,8 +37,8 @@ pub struct ScanArgs {
     #[arg(long)]
     pub ai: bool,
 
-    /// Path for the generated report (arrives in Phase 4).
-    #[arg(short, long, default_value = "report.html")]
+    /// Path for the generated HTML report (used with `--format html`).
+    #[arg(short, long, default_value = "rustydeps-report.html")]
     pub output: PathBuf,
 
     /// Output format for scan results.

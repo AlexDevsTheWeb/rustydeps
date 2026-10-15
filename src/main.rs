@@ -2,7 +2,8 @@
 //!
 //! `scan` discovers manifests, parses their declared dependencies, resolves the
 //! latest published version for each (unless `--offline`), classifies the
-//! update, and attaches a summary. Report generation arrives in Phase 4.
+//! update, attaches a summary, and renders a self-contained HTML report (or
+//! JSON).
 
 mod ai;
 mod classifier;
@@ -10,11 +11,14 @@ mod cli;
 mod model;
 mod parser;
 mod registry;
+mod report;
 mod scanner;
 
 use std::collections::{BTreeSet, HashMap};
+use std::path::Path;
+use std::time::Instant;
 
-use anyhow::Result;
+use anyhow::{Context, Result};
 use clap::Parser;
 use colored::Colorize;
 use tracing::{info, warn};
@@ -27,6 +31,7 @@ use crate::parser::{parse_manifests, ParsedDependency};
 use crate::registry::crates_io::CratesIoClient;
 use crate::registry::npm::NpmRegistryClient;
 use crate::registry::{fetch_latest_versions, RegistryClient, RegistryError, DEFAULT_CONCURRENCY};
+use crate::report::{ReportData, ReportMeta};
 
 /// Map of `(ecosystem, package)` to `(resolved latest version, error message)`.
 type VersionLookups = HashMap<(Ecosystem, String), (Option<String>, Option<String>)>;
@@ -98,6 +103,8 @@ async fn run_scan(args: ScanArgs) -> Result<()> {
         print_banner();
     }
 
+    let started = Instant::now();
+
     let manifests = scanner::scan_directory(&args.path)?;
     info!(
         root = %args.path.display(),
@@ -126,10 +133,29 @@ async fn run_scan(args: ScanArgs) -> Result<()> {
 
     let summarizer = Summarizer::new(args.ai);
     let classified = classify_all(&dependencies, &lookups, &summarizer);
+    let duration_ms = started.elapsed().as_millis();
 
     match args.format {
         OutputFormat::Json => println!("{}", serde_json::to_string_pretty(&classified)?),
-        OutputFormat::Html => print_summary(&classified),
+        OutputFormat::Html => {
+            print_summary(&classified);
+
+            let meta = ReportMeta {
+                scanned_root: Some(args.path.display().to_string()),
+                scan_duration_ms: Some(duration_ms),
+            };
+            let report = ReportData::from_classified(&classified, &meta);
+            let html = report
+                .render_html()
+                .context("failed to render the HTML report")?;
+            write_report(&args.output, &html)?;
+
+            let absolute =
+                std::fs::canonicalize(&args.output).unwrap_or_else(|_| args.output.clone());
+            println!();
+            println!("HTML report written to {}", args.output.display());
+            println!("Open it in your browser: file://{}", absolute.display());
+        }
     }
 
     info!(
@@ -137,9 +163,24 @@ async fn run_scan(args: ScanArgs) -> Result<()> {
         ai = summarizer.is_enabled(),
         ai_provider = summarizer.provider().map(|provider| provider.label()).unwrap_or("none"),
         offline = args.offline,
-        "report generation (--output) arrives in Phase 4; this run resolves and classifies dependencies"
+        duration_ms,
+        "scan complete"
     );
 
+    Ok(())
+}
+
+/// Write the rendered report, creating parent directories when needed.
+fn write_report(path: &Path, contents: &str) -> Result<()> {
+    if let Some(parent) = path.parent() {
+        if !parent.as_os_str().is_empty() {
+            std::fs::create_dir_all(parent)
+                .with_context(|| format!("failed to create directory {}", parent.display()))?;
+        }
+    }
+
+    std::fs::write(path, contents)
+        .with_context(|| format!("failed to write report to {}", path.display()))?;
     Ok(())
 }
 
