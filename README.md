@@ -6,6 +6,7 @@
 🦀 **Smart cross-registry dependency intelligence for Rust, Node, Python, Go & PHP.**
 
 [![Release](https://github.com/AlexDevsTheWeb/rustydeps/actions/workflows/release.yml/badge.svg)](https://github.com/AlexDevsTheWeb/rustydeps/actions/workflows/release.yml)
+[![Docker](https://github.com/AlexDevsTheWeb/rustydeps/actions/workflows/docker.yml/badge.svg)](https://github.com/AlexDevsTheWeb/rustydeps/actions/workflows/docker.yml)
 ![Version](https://img.shields.io/badge/version-0.1.0-ea580c)
 ![License](https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-blue)
 ![Rust](https://img.shields.io/badge/rust-1.88%2B-ea580c)
@@ -67,6 +68,62 @@ rustydeps scan . --format json
 rustydeps scan . --offline
 ```
 
+## Docker
+
+An official multi-arch image (Linux `amd64` and `arm64`) is published to GitHub
+Container Registry. It bundles the prebuilt binary, so a CI job needs neither a
+Rust toolchain nor a compile step:
+
+```bash
+# Pull the latest release and scan the current directory
+docker run --rm -v "$PWD:/workspace" ghcr.io/alexdevstheweb/rustydeps:latest
+
+# The report is written into the mounted directory
+docker run --rm -v "$PWD:/workspace" ghcr.io/alexdevstheweb/rustydeps:0.1.0 \
+  scan /workspace --no-open -o /workspace/rustydeps-report.html
+
+# Pin a version and skip registry lookups entirely
+docker run --rm -v "$PWD:/workspace" ghcr.io/alexdevstheweb/rustydeps:0.1.0 \
+  scan /workspace --offline --no-open
+```
+
+`/workspace` is the image's working directory, so `docker run --rm -v
+"$PWD:/workspace" ghcr.io/alexdevstheweb/rustydeps` on its own is equivalent to
+`rustydeps scan .` with the report landing beside your manifests. Image tags
+mirror the release tags (`0.1.0`, `0.1`) plus `latest` for the default branch.
+
+### CI usage
+
+```yaml
+# GitLab CI — the Alpine-based image ships `sh`, which job images require
+rustydeps:
+  image: ghcr.io/alexdevstheweb/rustydeps:0.1.0
+  script:
+    - rustydeps scan . --no-open -o rustydeps-report.html
+  artifacts:
+    paths: [rustydeps-report.html]
+```
+
+```yaml
+# GitHub Actions
+- uses: docker://ghcr.io/alexdevstheweb/rustydeps:0.1.0
+  with:
+    args: scan . --no-open
+```
+
+Notes:
+
+- The image contains **CA certificates**, so registry lookups over HTTPS work out
+  of the box; `--offline` skips them for a hermetic run.
+- It runs as **root**, deliberately: CI mounts a workspace owned by an arbitrary
+  host user, and a fixed non-root uid could not write the report there.
+- Auto-open is pointless inside a container, so pass **`--no-open`** (or let the
+  failed browser launch be logged as a warning).
+- The image is built and published by the
+  [Docker workflow](.github/workflows/docker.yml) on `main` pushes and `v*` tags;
+  pull requests build both architectures and smoke-test the image without
+  pushing.
+
 ## Features
 
 - **Auto-open report** — after `scan` writes the HTML report, it opens in your default
@@ -109,6 +166,9 @@ Pushing a tag matching `v*` (for example `v0.1.0`) triggers the
 [release workflow](.github/workflows/release.yml), which builds binaries for Linux
 (`x86_64-unknown-linux-gnu`) and macOS (`x86_64-apple-darwin`, `aarch64-apple-darwin`),
 then attaches them (with checksums and a changelog summary) to the GitHub Release.
+The same tag also triggers the [Docker workflow](.github/workflows/docker.yml),
+which publishes the multi-arch image to `ghcr.io/alexdevstheweb/rustydeps`
+tagged with the release version (see [Docker](#docker)).
 
 ```bash
 git tag v0.1.0

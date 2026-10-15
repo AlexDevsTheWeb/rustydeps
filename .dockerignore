@@ -1,0 +1,40 @@
+# Keep the build context to what `cargo build --release` actually reads
+# (`Cargo.toml`, `Cargo.lock`, `src/`, `templates/`). Everything else only
+# slows the upload and busts the dependency-cache layer.
+#
+# Patterns without a slash match at the context root only, so `*.html` and
+# `*.md` do not reach into `templates/` or `doc/` — `templates/report.html` is
+# still sent and the build needs it. Use `**/` for a recursive match.
+
+# Rust build output and local caches
+target/
+**/*.rs.bk
+
+# Version control
+.git/
+.gitignore
+
+# CI definitions (not needed to compile)
+.github/
+
+# Documentation, knowledge base and agent tooling
+doc/
+docs/
+.claude/
+AGENTS.md
+CLAUDE.md
+
+# Local agent scratch space (work journals)
+tmp/
+
+# Generated reports and local HTML output
+*.html
+
+# Markdown (README, licenses are copied only by the release workflow)
+*.md
+
+# Editor / OS noise
+.DS_Store
+.idea/
+.vscode/
+*.swp

@@ -1,0 +1,116 @@
+name: Docker
+
+# Build the multi-arch RustyDeps container image and, for branch/tag pushes,
+# publish it to GitHub Container Registry (ghcr.io).
+#
+#   * `main` pushes  -> publish, tagging `latest` (plus the branch name).
+#   * `v*` tag pushes -> publish, tagging the release versions (`1.2.3`, `1.2`).
+#   * pull requests into `main` or `development` -> build one architecture,
+#     push nothing, then run the image locally as a smoke test, so a broken
+#     Dockerfile fails review instead of the registry. `development` is
+#     included because feature branches integrate there, not into `main`.
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+    branches: [main, development]
+
+permissions:
+  contents: read
+  packages: write
+
+concurrency:
+  group: docker-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  REGISTRY: ghcr.io
+
+jobs:
+  image:
+    name: build image
+    runs-on: ubuntu-latest
+    # Cross-arch builds go through QEMU, so the dependency compile is slow.
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      # GHCR rejects mixed-case repository names and this owner is
+      # `AlexDevsTheWeb`, so the reference is lowercased explicitly instead of
+      # relying on `github.repository_owner` staying lowercase. `tr` rather than
+      # bash's `${var,,}` keeps the step valid under any shell.
+      - name: Compute image reference
+        id: image
+        run: |
+          set -euo pipefail
+          owner_and_repo="$(printf '%s' "${GITHUB_REPOSITORY}" | tr '[:upper:]' '[:lower:]')"
+          echo "name=${REGISTRY}/${owner_and_repo}" >> "$GITHUB_OUTPUT"
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract image metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ steps.image.outputs.name }}
+          tags: |
+            type=ref,event=branch
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=ref,event=pr
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: ${{ github.event_name == 'pull_request' && 'linux/amd64' || 'linux/amd64,linux/arm64' }}
+          # `load` and `push` are mutually exclusive: a multi-platform image
+          # cannot be loaded into the local daemon, and a pull request has
+          # nowhere to push to.
+          push: ${{ github.event_name != 'pull_request' }}
+          load: ${{ github.event_name == 'pull_request' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # An image is only useful if it runs. The assertions below are what make
+      # this step meaningful: the version banner must come back from the
+      # container, and the scan must write a real report through the mounted
+      # workspace. `--offline` keeps the check deterministic; the report goes
+      # to a scratch directory inside the mount and is removed afterwards.
+      - name: Smoke-test the image
+        if: github.event_name == 'pull_request'
+        run: |
+          set -euo pipefail
+          image="$(printf '%s\n' "${{ steps.meta.outputs.tags }}" | head -n 1)"
+          echo "testing ${image}"
+
+          version="$(docker run --rm "${image}" --version)"
+          echo "container reports: ${version}"
+          grep -q "rustydeps" <<< "${version}"
+
+          scratch="${GITHUB_WORKSPACE}/.ci-smoke"
+          mkdir -p "${scratch}"
+          docker run --rm -v "${GITHUB_WORKSPACE}:/workspace" "${image}" \
+            scan /workspace --offline --no-open -o /workspace/.ci-smoke/report.html
+
+          test -s "${scratch}/report.html"
+          grep -qi "<html" "${scratch}/report.html"
+          echo "report written through the mount: $(wc -c < "${scratch}/report.html") bytes"
+          rm -rf "${scratch}"
