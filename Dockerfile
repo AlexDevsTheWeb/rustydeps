@@ -12,12 +12,13 @@
 # ---------------------------------------------------------------------------
 FROM rust:1-alpine AS builder
 
-# `rust:1-alpine` already ships `gcc`, `musl-dev` and `ca-certificates` (see
-# docker-rust's `Dockerfile-alpine.template`), so the only addition is
-# `openssl-dev`, which provides the TLS headers: on Linux `reqwest` goes through
-# the system TLS stack (native-tls), so `openssl-sys` needs the headers plus
-# `pkgconf` to find and link them.
-RUN apk add --no-cache openssl-dev pkgconf
+# The musl target statically links by default (`crt-static`), so the linker
+# needs OpenSSL as an *archive*: `openssl-dev` supplies the headers and
+# `openssl-libs-static` the `libssl.a`/`libcrypto.a` the final link pulls in.
+# Alpine builds OpenSSL with `no-zlib` (see aports `main/openssl/APKBUILD`), so
+# no `-lz` is required. `pkgconf` lets `openssl-sys` find all of it.
+# (`gcc`, `musl-dev` and `ca-certificates` already come with `rust:1-alpine`.)
+RUN apk add --no-cache openssl-dev openssl-libs-static pkgconf
 
 WORKDIR /build
 
@@ -51,12 +52,14 @@ RUN touch src/main.rs \
 FROM alpine:3 AS runtime
 
 # ca-certificates — HTTPS calls to crates.io, npm, PyPI, proxy.golang.org and
-# packagist.org.
-# libssl3/libcrypto3 — the shared OpenSSL the binary links against.
-# libgcc — unwinding support for the Rust runtime.
+# packagist.org, read at run time from the trust store.
+# Nothing else is needed: the `crt-static` musl build links libc, libgcc and
+# OpenSSL into the binary, so there are no shared-library dependencies to
+# install. If the build ever switches to dynamic linking, `libssl3` has to come
+# back — the workflow smoke test runs this image, so it would fail loudly.
 # BusyBox `sh` comes with the base image, which CI systems (GitLab CI and
 # friends) need in a job image.
-RUN apk add --no-cache ca-certificates libssl3 libgcc
+RUN apk add --no-cache ca-certificates
 
 COPY --from=builder /build/target/release/rustydeps /usr/local/bin/rustydeps
 
