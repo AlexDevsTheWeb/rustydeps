@@ -1,0 +1,1793 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>RustyDeps — Dependency Intelligence</title>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600&amp;family=Geist+Mono:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<style>
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    :root {
+      --bg: #09090b;
+      --card-bg: #111114;
+      --card-hover: #16161a;
+      --row-hover: #141418;
+      --border: #222226;
+      --border-subtle: #1c1c20;
+      --text-primary: #f4f4f5;
+      --text-secondary: #a1a1aa;
+      --text-muted: #71717a;
+      --text-faint: #52525b;
+
+      --accent-breaking: #f43f5e;
+      --accent-risk: #fbbf24;
+      --accent-safe: #10b981;
+      --accent-rust: #ea580c;
+
+      --font-sans: 'Geist', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      --font-mono: 'Geist Mono', SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    }
+
+    body {
+      background-color: var(--bg);
+      color: var(--text-primary);
+      font-family: var(--font-sans);
+      font-size: 13px;
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .container {
+      max-width: 1100px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 0 24px;
+    }
+
+    /* Top Navigation / Header */
+    header {
+      border-bottom: 1px solid var(--border-subtle);
+      background: rgba(9, 9, 11, 0.85);
+      backdrop-filter: blur(8px);
+      position: sticky;
+      top: 0;
+      z-index: 40;
+    }
+
+    .header-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 52px;
+    }
+
+    .brand-wrap {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .logo-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-weight: 500;
+      font-size: 13px;
+      letter-spacing: -0.01em;
+      color: var(--text-primary);
+    }
+
+    .rust-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--accent-rust);
+      box-shadow: 0 0 8px rgba(234, 88, 12, 0.5);
+    }
+
+    .version-tag {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--text-muted);
+      background: #18181b;
+      padding: 1px 6px;
+      border-radius: 4px;
+      border: 1px solid var(--border-subtle);
+    }
+
+    .header-stats {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+
+    .stat-meta {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      color: var(--text-muted);
+    }
+
+    .stat-meta span {
+      color: var(--text-secondary);
+      font-family: var(--font-mono);
+    }
+
+    .dot-badge-group {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding-left: 12px;
+      border-left: 1px solid var(--border-subtle);
+    }
+
+    .dot-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 12px;
+      font-family: var(--font-sans);
+      color: var(--text-secondary);
+      cursor: pointer;
+      transition: opacity 0.15s ease;
+      user-select: none;
+    }
+
+    .dot-badge:hover {
+      opacity: 0.8;
+    }
+
+    .dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      display: inline-block;
+      flex-shrink: 0;
+    }
+
+    .dot-breaking { background-color: var(--accent-breaking); }
+    .dot-risk { background-color: var(--accent-risk); }
+    .dot-safe { background-color: var(--accent-safe); }
+
+    /* Action bar / Search & Filter */
+    .controls-strip {
+      padding: 24px 0 16px 0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    .search-container {
+      position: relative;
+      flex: 1;
+      max-width: 480px;
+    }
+
+    .search-input {
+      width: 100%;
+      background: #121215;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 7px 32px 7px 30px;
+      color: var(--text-primary);
+      font-size: 12px;
+      font-family: var(--font-sans);
+      outline: none;
+      transition: border-color 0.15s ease, background 0.15s ease;
+    }
+
+    .search-input:focus {
+      border-color: #3f3f46;
+      background: #151519;
+    }
+
+    .search-input::placeholder {
+      color: var(--text-muted);
+    }
+
+    .search-icon {
+      position: absolute;
+      left: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 13px;
+      height: 13px;
+      color: var(--text-muted);
+      pointer-events: none;
+    }
+
+    .search-shortcut {
+      position: absolute;
+      right: 8px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-family: var(--font-mono);
+      font-size: 10px;
+      color: var(--text-muted);
+      border: 1px solid var(--border);
+      padding: 1px 5px;
+      border-radius: 3px;
+      background: #1a1a1f;
+      pointer-events: none;
+    }
+
+    .filter-tabs {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      background: #121215;
+      padding: 3px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+    }
+
+    .filter-tab {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      font-size: 11.5px;
+      font-family: var(--font-sans);
+      padding: 4px 10px;
+      border-radius: 4px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.12s ease;
+    }
+
+    .filter-tab:hover {
+      color: var(--text-secondary);
+    }
+
+    .filter-tab.active {
+      background: #202025;
+      color: var(--text-primary);
+      font-weight: 500;
+    }
+
+    .view-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .btn-ghost-sm {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text-secondary);
+      font-size: 11.5px;
+      padding: 5px 10px;
+      border-radius: 5px;
+      cursor: pointer;
+      font-family: var(--font-sans);
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.15s ease;
+    }
+
+    .btn-ghost-sm:hover {
+      background: #18181c;
+      color: var(--text-primary);
+      border-color: #38383f;
+    }
+
+    /* Projects Stack */
+    .projects-list {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      margin-bottom: 40px;
+    }
+
+    /* Project Card */
+    .project-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+      transition: border-color 0.15s ease;
+    }
+
+    .project-card:focus-within,
+    .project-card:hover {
+      border-color: #2e2e34;
+    }
+
+    /* Project Header (Accordion trigger) */
+    .project-header {
+      padding: 10px 14px;
+      background: #141418;
+      border-bottom: 1px solid var(--border-subtle);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      cursor: pointer;
+      user-select: none;
+      transition: background 0.12s ease;
+    }
+
+    .project-header:hover {
+      background: #17171d;
+    }
+
+    .project-title-area {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+    }
+
+    .accordion-toggle {
+      width: 14px;
+      height: 14px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-muted);
+      transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .project-card.collapsed .accordion-toggle {
+      transform: rotate(-90deg);
+    }
+
+    .project-card.collapsed .project-header {
+      border-bottom-color: transparent;
+    }
+
+    .project-card.collapsed .project-deps {
+      display: none;
+    }
+
+    .ecosystem-pill {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--text-muted);
+      background: #1a1a20;
+      border: 1px solid var(--border-subtle);
+      padding: 1px 5px;
+      border-radius: 3px;
+    }
+
+    .project-name {
+      font-weight: 500;
+      font-size: 13px;
+      color: var(--text-primary);
+      letter-spacing: -0.01em;
+    }
+
+    .project-path {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--text-faint);
+      margin-left: 4px;
+    }
+
+    .project-header-right {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .project-counts {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    .project-counts span {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .update-all-btn {
+      font-size: 11px;
+      font-family: var(--font-mono);
+      background: transparent;
+      border: 1px solid var(--border-subtle);
+      color: var(--text-secondary);
+      padding: 3px 8px;
+      border-radius: 4px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      transition: all 0.15s ease;
+    }
+
+    .update-all-btn:hover {
+      background: #1e1e24;
+      border-color: #383842;
+      color: var(--text-primary);
+    }
+
+    /* Dependency Rows Table */
+    .project-deps {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .dep-row-wrap {
+      border-bottom: 1px solid var(--border-subtle);
+    }
+
+    .dep-row-wrap:last-child {
+      border-bottom: none;
+    }
+
+    .dep-row {
+      display: grid;
+      grid-template-columns: 210px 170px 110px 1fr 64px;
+      align-items: center;
+      padding: 9px 14px;
+      cursor: pointer;
+      transition: background 0.12s ease;
+      font-size: 12.5px;
+    }
+
+    .dep-row:hover {
+      background: var(--row-hover);
+    }
+
+    .dep-row.expanded {
+      background: #15151a;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+
+    /* Column: Package Name */
+    .col-pkg {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-family: var(--font-mono);
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text-primary);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    /* Column: Version Jump */
+    .col-versions {
+      font-family: var(--font-mono);
+      font-size: 11.5px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .ver-current {
+      color: var(--text-muted);
+    }
+
+    .ver-arrow {
+      color: var(--text-faint);
+      font-size: 10px;
+    }
+
+    .ver-target {
+      color: var(--text-primary);
+      font-weight: 500;
+    }
+
+    .ver-target.breaking {
+      color: #fda4af; /* very subtle rose tint on destination */
+    }
+
+    /* Column: Minimal Risk Dot + Label (Strict Rule: NO pill background) */
+    .col-risk {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+    }
+
+    .risk-label {
+      color: var(--text-secondary);
+      font-size: 11.5px;
+      text-transform: lowercase;
+    }
+
+    /* Column: Muted AI Insight Text (Strict Rule: NO bright purple badges) */
+    .col-insight {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      color: var(--text-muted);
+      font-size: 11.5px;
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+      padding-right: 12px;
+    }
+
+    .ai-prefix-icon {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      color: var(--text-faint);
+      letter-spacing: -0.05em;
+      flex-shrink: 0;
+      border: 1px solid var(--border-subtle);
+      padding: 0 3px;
+      border-radius: 3px;
+      background: #16161a;
+    }
+
+    .insight-text {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      color: #92929c;
+    }
+
+    /* Column: Action Icons */
+    .col-actions {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 4px;
+    }
+
+    .icon-btn {
+      width: 24px;
+      height: 24px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border: none;
+      background: transparent;
+      color: var(--text-muted);
+      border-radius: 4px;
+      cursor: pointer;
+      transition: all 0.12s ease;
+    }
+
+    .icon-btn:hover {
+      background: #202026;
+      color: var(--text-primary);
+    }
+
+    .chevron-icon {
+      transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .dep-row.expanded .chevron-icon {
+      transform: rotate(180deg);
+    }
+
+    /* Inline Drawer (Changelog Breakdown & Command) */
+    .dep-drawer {
+      display: none;
+      background: #0d0d10;
+      padding: 16px 20px 18px 20px;
+      border-top: 1px solid var(--border-subtle);
+    }
+
+    .dep-drawer.active {
+      display: block;
+      animation: fadeIn 0.15s ease;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(-3px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .drawer-grid {
+      display: grid;
+      grid-template-columns: 1fr 340px;
+      gap: 24px;
+    }
+
+    .drawer-section-title {
+      font-size: 11px;
+      font-family: var(--font-mono);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .drawer-summary-card {
+      background: #121216;
+      border: 1px solid var(--border-subtle);
+      border-radius: 6px;
+      padding: 12px 14px;
+    }
+
+    .drawer-summary-title {
+      font-size: 12.5px;
+      font-weight: 500;
+      color: var(--text-primary);
+      margin-bottom: 6px;
+    }
+
+    .drawer-summary-desc {
+      font-size: 12px;
+      color: var(--text-secondary);
+      line-height: 1.55;
+      margin-bottom: 12px;
+    }
+
+    .breaking-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      font-size: 11.5px;
+      color: #d4d4d8;
+    }
+
+    .breaking-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+    }
+
+    .breaking-bullet {
+      color: var(--accent-breaking);
+      font-size: 13px;
+      line-height: 1.2;
+    }
+
+    .cli-box {
+      background: #141418;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 12px 14px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    .cli-command-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      background: #09090b;
+      border: 1px solid var(--border-subtle);
+      border-radius: 4px;
+      padding: 8px 10px;
+      margin-top: 6px;
+    }
+
+    .cli-command-text {
+      font-family: var(--font-mono);
+      font-size: 11.5px;
+      color: #38bdf8;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .copy-pill-btn {
+      background: #1c1c22;
+      border: 1px solid var(--border);
+      color: var(--text-secondary);
+      font-size: 11px;
+      font-family: var(--font-sans);
+      padding: 3px 8px;
+      border-radius: 4px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      transition: all 0.12s ease;
+      flex-shrink: 0;
+    }
+
+    .copy-pill-btn:hover {
+      background: #272730;
+      color: var(--text-primary);
+      border-color: #40404c;
+    }
+
+    .drawer-meta-links {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin-top: 14px;
+      font-size: 11px;
+    }
+
+    .drawer-link {
+      color: var(--text-muted);
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      transition: color 0.12s ease;
+    }
+
+    .drawer-link:hover {
+      color: var(--text-primary);
+    }
+
+    /* Footer */
+    footer {
+      margin-top: auto;
+      border-top: 1px solid var(--border-subtle);
+      padding: 14px 0;
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    .footer-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .footer-hints {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .kbd-hint {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .kbd {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      color: var(--text-secondary);
+      background: #18181b;
+      border: 1px solid var(--border);
+      border-radius: 3px;
+      padding: 0 4px;
+    }
+
+    /* Toast Notification */
+    #toast {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: #18181b;
+      color: var(--text-primary);
+      border: 1px solid #323238;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+      border-radius: 6px;
+      padding: 8px 14px;
+      font-size: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      opacity: 0;
+      pointer-events: none;
+      transform: translateY(8px);
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+      z-index: 100;
+      font-family: var(--font-sans);
+    }
+
+    #toast.show {
+      opacity: 1;
+      transform: translateY(0);
+      pointer-events: auto;
+    }
+  </style>
+</head>
+<body>
+<!-- Sticky Top Header -->
+<header>
+<div class="container header-inner">
+<div class="brand-wrap">
+<div class="logo-badge">
+<span class="rust-dot"></span>
+<span>RustyDeps</span>
+</div>
+<span class="version-tag">v0.1.0</span>
+</div>
+<div class="header-stats">
+<div class="stat-meta">
+<span>5</span> projects
+        </div>
+<span style="color: var(--border);">/</span>
+<div class="stat-meta">
+<span>8</span> dependencies
+        </div>
+<span style="color: var(--border);">/</span>
+<div class="stat-meta">
+          Scanned in <span>1.2s</span>
+</div>
+<div class="dot-badge-group">
+<div class="dot-badge" data-filter="breaking" title="Show only breaking updates">
+<span class="dot dot-breaking"></span>
+<span>3 breaking</span>
+</div>
+<div class="dot-badge" data-filter="risk" title="Show only at-risk updates">
+<span class="dot dot-risk"></span>
+<span>2 at-risk</span>
+</div>
+<div class="dot-badge" data-filter="safe" title="Show only safe updates">
+<span class="dot dot-safe"></span>
+<span>3 safe</span>
+</div>
+</div>
+</div>
+</div>
+</header>
+<!-- Main Content Area -->
+<main class="container">
+<!-- Controls Strip -->
+<div class="controls-strip">
+<div class="search-container">
+<svg class="search-icon" fill="none" stroke="currentColor" stroke-width="1.75" viewbox="0 0 16 16">
+<circle cx="7" cy="7" r="4.5"></circle>
+<path d="M10.5 10.5L14 14" stroke-linecap="round"></path>
+</svg>
+<input autocomplete="off" class="search-input" id="searchInput" placeholder="Filter packages, manifests, or changelogs..." type="text"/>
+<span class="search-shortcut">/</span>
+</div>
+<div style="display: flex; align-items: center; gap: 12px;">
+<div class="filter-tabs">
+<button class="filter-tab active" data-filter="all">All</button>
+<button class="filter-tab" data-filter="breaking">
+<span class="dot dot-breaking"></span> Breaking
+          </button>
+<button class="filter-tab" data-filter="risk">
+<span class="dot dot-risk"></span> At-Risk
+          </button>
+<button class="filter-tab" data-filter="safe">
+<span class="dot dot-safe"></span> Safe
+          </button>
+</div>
+<div class="view-actions">
+<button class="btn-ghost-sm" id="collapseAllBtn">
+<svg fill="none" height="12" stroke="currentColor" stroke-width="1.75" viewbox="0 0 16 16" width="12">
+<path d="M3 10L8 5L13 10" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+            Collapse All
+          </button>
+</div>
+</div>
+</div>
+<!-- Projects Stack Container -->
+<div class="projects-list" id="projectsContainer">
+<!-- PROJECT 1: backend-api -->
+<!-- RUST_TEMPLATE_INJECTION_POINT: PROJECT_CARD_START -->
+<div class="project-card" data-project="backend-api">
+<div class="project-header" onclick="toggleProject(this)">
+<div class="project-title-area">
+<span class="accordion-toggle">
+<svg fill="none" height="10" stroke="currentColor" stroke-width="2" viewbox="0 0 16 16" width="10">
+<path d="M4 6L8 10L12 6" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+</span>
+<span class="ecosystem-pill">Cargo</span>
+<span class="project-name">backend-api</span>
+<span class="project-path">services/backend/Cargo.toml</span>
+</div>
+<div class="project-header-right">
+<div class="project-counts">
+<span><i class="dot dot-breaking"></i> 1 breaking</span>
+<span><i class="dot dot-safe"></i> 1 safe</span>
+</div>
+<button class="update-all-btn" onclick="event.stopPropagation(); openBatchModal('backend-api', 'Cargo', 'services/backend/Cargo.toml', 'cargo update -p tokio --precise 2.0.0 &amp;&amp; cargo update -p axum --precise 0.7.7')">
+<svg fill="none" height="11" stroke="currentColor" stroke-width="1.75" viewbox="0 0 16 16" width="11">
+<rect height="8" rx="1.5" width="8" x="5" y="5"></rect>
+<path d="M3 11V3.5C3 2.67157 3.67157 2 4.5 2H11" stroke-linecap="round"></path>
+</svg>
+              Update All
+            </button>
+</div>
+</div>
+<div class="project-deps">
+<!-- Row 1: tokio -->
+<div class="dep-row-wrap" data-pkg="tokio" data-status="breaking">
+<div class="dep-row" onclick="toggleDrawer('drawer-tokio', this)">
+<div class="col-pkg">
+<span>tokio</span>
+</div>
+<div class="col-versions">
+<span class="ver-current">1.35.1</span>
+<span class="ver-arrow">→</span>
+<span class="ver-target breaking">2.0.0</span>
+</div>
+<div class="col-risk">
+<span class="dot dot-breaking"></span>
+<span class="risk-label">major</span>
+</div>
+<div class="col-insight">
+<span class="ai-prefix-icon">AI</span>
+<span class="insight-text">Async runtime rewrite: task spawning API requires static lifetime bounds</span>
+</div>
+<div class="col-actions">
+<button class="icon-btn" onclick="event.stopPropagation(); copyCommand('cargo update -p tokio')" title="Copy CLI Command">
+<svg fill="none" height="12" stroke="currentColor" stroke-width="1.75" viewbox="0 0 16 16" width="12">
+<rect height="8" rx="1.5" width="8" x="5" y="5"></rect>
+<path d="M3 11V3.5C3 2.67157 3.67157 2 4.5 2H11" stroke-linecap="round"></path>
+</svg>
+</button>
+<span class="icon-btn chevron-icon">
+<svg fill="none" height="10" stroke="currentColor" stroke-width="2" viewbox="0 0 16 16" width="10">
+<path d="M4 6L8 10L12 6" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+</span>
+</div>
+</div>
+<!-- Drawer for tokio -->
+<div class="dep-drawer" id="drawer-tokio"><div class="drawer-grid">
+<div>
+<div class="drawer-section-title">
+<span>AI Changelog &amp; Impact Analysis</span>
+<span class="semver-badge">Major Bump: 1.35.1 → 2.0.0</span>
+</div>
+<div class="drawer-summary-card">
+<div class="drawer-summary-title">Breaking changes in task spawn signature</div>
+<div class="drawer-summary-desc">
+        Tokio 2.0.0 deprecates synchronous blocking helpers inside async workers. All spawned task closures must now explicitly implement <code>'static</code> or use scoped task groups.
+      </div>
+<ul class="breaking-list">
+<li class="breaking-item">
+<span class="breaking-bullet">•</span>
+<span><code>tokio::spawn</code> requires strict Send + 'static thread safety</span>
+</li>
+<li class="breaking-item">
+<span class="breaking-bullet">•</span>
+<span>Removed legacy <code>tokio::sync::mpsc::UnboundedSender::send_timeout</code></span>
+</li>
+</ul>
+<div class="migration-step">
+<strong>Recommended Migration Step:</strong> Audit task spawning handlers in <code>services/backend/src/workers</code> and replace unconstrained closures with <span>tokio::task::JoinSet</span>.
+      </div>
+</div>
+<div class="drawer-meta-links">
+<a class="drawer-link" href="https://github.com/tokio-rs/tokio/releases" target="_blank">
+        View full release notes &amp; changelog ↗
+      </a>
+<span style="color: var(--border);">•</span>
+<a class="drawer-link" href="https://github.com/tokio-rs/tokio/compare/v1.35.1...v2.0.0" target="_blank">View Diff Analysis ↗</a>
+</div>
+</div>
+<div class="cli-box">
+<div>
+<div class="drawer-section-title">Quick Update Command</div>
+<p style="font-size: 11.5px; color: var(--text-muted); margin-bottom: 8px;">Run this command in <code>services/backend</code>:</p>
+<div class="cli-command-row">
+<span class="cli-command-text"><span class="terminal-prompt-prefix">$</span>cargo update -p tokio --precise 2.0.0</span>
+<button class="copy-pill-btn" onclick="event.stopPropagation(); copyCommand('cargo update -p tokio --precise 2.0.0')">Copy</button>
+</div>
+</div>
+<div style="font-size: 11px; color: var(--text-faint); margin-top: 14px;">
+      Target: Monorepo crate lockfile
+    </div>
+</div>
+</div></div>
+</div>
+<!-- Row 2: axum -->
+<div class="dep-row-wrap" data-pkg="axum" data-status="safe">
+<div class="dep-row" onclick="toggleDrawer('drawer-axum', this)">
+<div class="col-pkg">
+<span>axum</span>
+</div>
+<div class="col-versions">
+<span class="ver-current">0.7.4</span>
+<span class="ver-arrow">→</span>
+<span class="ver-target">0.7.7</span>
+</div>
+<div class="col-risk">
+<span class="dot dot-safe"></span>
+<span class="risk-label">patch</span>
+</div>
+<div class="col-insight">
+<span class="ai-prefix-icon">AI</span>
+<span class="insight-text">Edge-case fix: HTTP/2 body stream truncation handling under high load</span>
+</div>
+<div class="col-actions">
+<button class="icon-btn" onclick="event.stopPropagation(); copyCommand('cargo update -p axum')" title="Copy CLI Command">
+<svg fill="none" height="12" stroke="currentColor" stroke-width="1.75" viewbox="0 0 16 16" width="12">
+<rect height="8" rx="1.5" width="8" x="5" y="5"></rect>
+<path d="M3 11V3.5C3 2.67157 3.67157 2 4.5 2H11" stroke-linecap="round"></path>
+</svg>
+</button>
+<span class="icon-btn chevron-icon">
+<svg fill="none" height="10" stroke="currentColor" stroke-width="2" viewbox="0 0 16 16" width="10">
+<path d="M4 6L8 10L12 6" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+</span>
+</div>
+</div>
+<!-- Drawer for axum -->
+<div class="dep-drawer" id="drawer-axum">
+<div class="drawer-grid">
+<div>
+<div class="drawer-section-title">AI Changelog &amp; Impact Analysis</div>
+<div class="drawer-summary-card">
+<div class="drawer-summary-title">Routine patch with no breaking API changes</div>
+<div class="drawer-summary-desc">
+                      Addresses an upstream hyper connection reset bug where premature socket closure dropped the final payload chunk without warning. Safe to update directly.
+                    </div>
+</div>
+<div class="drawer-meta-links">
+<a class="drawer-link" href="https://github.com/tokio-rs/axum/releases" target="_blank">GitHub Release Notes ↗</a>
+</div>
+</div>
+<div class="cli-box">
+<div>
+<div class="drawer-section-title">Quick Update Command</div>
+<div class="cli-command-row">
+<span class="cli-command-text">cargo update -p axum</span>
+<button class="copy-pill-btn" onclick="copyCommand('cargo update -p axum')">Copy</button>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- RUST_TEMPLATE_INJECTION_POINT: PROJECT_CARD_END -->
+<!-- PROJECT 2: web-dashboard -->
+<div class="project-card" data-project="web-dashboard">
+<div class="project-header" onclick="toggleProject(this)">
+<div class="project-title-area">
+<span class="accordion-toggle">
+<svg fill="none" height="10" stroke="currentColor" stroke-width="2" viewbox="0 0 16 16" width="10">
+<path d="M4 6L8 10L12 6" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+</span>
+<span class="ecosystem-pill">npm</span>
+<span class="project-name">web-dashboard</span>
+<span class="project-path">apps/web/package.json</span>
+</div>
+<div class="project-header-right">
+<div class="project-counts">
+<span><i class="dot dot-breaking"></i> 2 breaking</span>
+</div>
+<button class="update-all-btn" onclick="event.stopPropagation(); openBatchModal('web-dashboard', 'npm', 'apps/web/package.json', 'npm i @prisma/client@6.0.1 prisma@6.0.1 tailwindcss@4.0.0')">
+<svg fill="none" height="11" stroke="currentColor" stroke-width="1.75" viewbox="0 0 16 16" width="11">
+<rect height="8" rx="1.5" width="8" x="5" y="5"></rect>
+<path d="M3 11V3.5C3 2.67157 3.67157 2 4.5 2H11" stroke-linecap="round"></path>
+</svg>
+              Update All
+            </button>
+</div>
+</div>
+<div class="project-deps">
+<!-- Row 3: @prisma/client -->
+<div class="dep-row-wrap" data-pkg="@prisma/client" data-status="breaking">
+<div class="dep-row" onclick="toggleDrawer('drawer-prisma', this)">
+<div class="col-pkg">
+<span>@prisma/client</span>
+</div>
+<div class="col-versions">
+<span class="ver-current">5.10.0</span>
+<span class="ver-arrow">→</span>
+<span class="ver-target breaking">6.0.1</span>
+</div>
+<div class="col-risk">
+<span class="dot dot-breaking"></span>
+<span class="risk-label">major</span>
+</div>
+<div class="col-insight">
+<span class="ai-prefix-icon">AI</span>
+<span class="insight-text">Dropped Node.js 16/18.11 support; default driver adapters refactored</span>
+</div>
+<div class="col-actions">
+<button class="icon-btn" onclick="event.stopPropagation(); copyCommand('npm install @prisma/client@latest')" title="Copy CLI Command">
+<svg fill="none" height="12" stroke="currentColor" stroke-width="1.75" viewbox="0 0 16 16" width="12">
+<rect height="8" rx="1.5" width="8" x="5" y="5"></rect>
+<path d="M3 11V3.5C3 2.67157 3.67157 2 4.5 2H11" stroke-linecap="round"></path>
+</svg>
+</button>
+<span class="icon-btn chevron-icon">
+<svg fill="none" height="10" stroke="currentColor" stroke-width="2" viewbox="0 0 16 16" width="10">
+<path d="M4 6L8 10L12 6" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+</span>
+</div>
+</div>
+<div class="dep-drawer" id="drawer-prisma"><div class="drawer-grid">
+<div>
+<div class="drawer-section-title">
+<span>AI Changelog &amp; Impact Analysis</span>
+<span class="semver-badge">Major Bump: 5.10.0 → 6.0.1</span>
+</div>
+<div class="drawer-summary-card">
+<div class="drawer-summary-title">Prisma v6 Architecture Migration</div>
+<div class="drawer-summary-desc">
+        Serverless driver adapters now require explicit package registration. If deploying to Cloudflare Workers or Vercel Edge, configure <code>@prisma/adapter-pg</code> manually.
+      </div>
+<ul class="breaking-list">
+<li class="breaking-item">
+<span class="breaking-bullet">•</span>
+<span>Node 18.12+ runtime requirement enforced in engine binary</span>
+</li>
+<li class="breaking-item">
+<span class="breaking-bullet">•</span>
+<span>Raw query string sanitization syntax updated to prevent AST pollution</span>
+</li>
+</ul>
+<div class="migration-step">
+<strong>Recommended Migration Step:</strong> Install driver adapters and run <span>npx prisma generate</span> to rebuild query engine bindings.
+      </div>
+</div>
+<div class="drawer-meta-links">
+<a class="drawer-link" href="https://github.com/prisma/prisma/releases" target="_blank">
+        View full release notes &amp; changelog ↗
+      </a>
+</div>
+</div>
+<div class="cli-box">
+<div>
+<div class="drawer-section-title">Quick Update Command</div>
+<p style="font-size: 11.5px; color: var(--text-muted); margin-bottom: 8px;">Run this command in <code>apps/web</code>:</p>
+<div class="cli-command-row">
+<span class="cli-command-text"><span class="terminal-prompt-prefix">$</span>npm i @prisma/client@6.0.1 prisma@6.0.1</span>
+<button class="copy-pill-btn" onclick="event.stopPropagation(); copyCommand('npm i @prisma/client@6.0.1 prisma@6.0.1')">Copy</button>
+</div>
+</div>
+<div style="font-size: 11px; color: var(--text-faint); margin-top: 14px;">
+      Target: apps/web/package.json
+    </div>
+</div>
+</div></div>
+</div>
+<!-- Row 4: tailwindcss -->
+<div class="dep-row-wrap" data-pkg="tailwindcss" data-status="breaking">
+<div class="dep-row" onclick="toggleDrawer('drawer-tailwind', this)">
+<div class="col-pkg">
+<span>tailwindcss</span>
+</div>
+<div class="col-versions">
+<span class="ver-current">3.4.1</span>
+<span class="ver-arrow">→</span>
+<span class="ver-target breaking">4.0.0</span>
+</div>
+<div class="col-risk">
+<span class="dot dot-breaking"></span>
+<span class="risk-label">major</span>
+</div>
+<div class="col-insight">
+<span class="ai-prefix-icon">AI</span>
+<span class="insight-text">Engine rewrite (Oxide): CSS-first configuration replaces tailwind.config.js</span>
+</div>
+<div class="col-actions">
+<button class="icon-btn" onclick="event.stopPropagation(); copyCommand('npm install tailwindcss@next')" title="Copy CLI Command">
+<svg fill="none" height="12" stroke="currentColor" stroke-width="1.75" viewbox="0 0 16 16" width="12">
+<rect height="8" rx="1.5" width="8" x="5" y="5"></rect>
+<path d="M3 11V3.5C3 2.67157 3.67157 2 4.5 2H11" stroke-linecap="round"></path>
+</svg>
+</button>
+<span class="icon-btn chevron-icon">
+<svg fill="none" height="10" stroke="currentColor" stroke-width="2" viewbox="0 0 16 16" width="10">
+<path d="M4 6L8 10L12 6" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+</span>
+</div>
+</div>
+<div class="dep-drawer" id="drawer-tailwind"><div class="drawer-grid">
+<div>
+<div class="drawer-section-title">
+<span>AI Changelog &amp; Impact Analysis</span>
+<span class="semver-badge">Major Bump: 3.4.1 → 4.0.0</span>
+</div>
+<div class="drawer-summary-card">
+<div class="drawer-summary-title">Oxide Rust Engine &amp; CSS-first config</div>
+<div class="drawer-summary-desc">
+        Tailwind v4 replaces <code>tailwind.config.js</code> with CSS native directives (<code>@theme</code>, <code>@utility</code>). Legacy PostCSS plugins need migration to Vite / Lightning CSS.
+      </div>
+<div class="migration-step">
+<strong>Recommended Migration Step:</strong> Move custom theme declarations from <code>tailwind.config.js</code> to <span>@theme</span> blocks inside your main stylesheet.
+      </div>
+</div>
+<div class="drawer-meta-links">
+<a class="drawer-link" href="https://tailwindcss.com/docs/v4-beta" target="_blank">View full release notes &amp; changelog ↗</a>
+</div>
+</div>
+<div class="cli-box">
+<div>
+<div class="drawer-section-title">Quick Update Command</div>
+<p style="font-size: 11.5px; color: var(--text-muted); margin-bottom: 8px;">Run this command in <code>apps/web</code>:</p>
+<div class="cli-command-row">
+<span class="cli-command-text"><span class="terminal-prompt-prefix">$</span>npm install tailwindcss@4.0.0 @tailwindcss/vite@4.0.0</span>
+<button class="copy-pill-btn" onclick="event.stopPropagation(); copyCommand('npm install tailwindcss@4.0.0 @tailwindcss/vite@4.0.0')">Copy</button>
+</div>
+</div>
+<div style="font-size: 11px; color: var(--text-faint); margin-top: 14px;">
+      Target: apps/web/package.json
+    </div>
+</div>
+</div></div>
+</div>
+</div>
+</div>
+<!-- PROJECT 3: ml-worker -->
+<div class="project-card" data-project="ml-worker">
+<div class="project-header" onclick="toggleProject(this)">
+<div class="project-title-area">
+<span class="accordion-toggle">
+<svg fill="none" height="10" stroke="currentColor" stroke-width="2" viewbox="0 0 16 16" width="10">
+<path d="M4 6L8 10L12 6" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+</span>
+<span class="ecosystem-pill">PyPI</span>
+<span class="project-name">ml-worker</span>
+<span class="project-path">services/ml_worker/pyproject.toml</span>
+</div>
+<div class="project-header-right">
+<div class="project-counts">
+<span><i class="dot dot-risk"></i> 1 at-risk</span>
+<span><i class="dot dot-safe"></i> 1 safe</span>
+</div>
+<button class="update-all-btn" onclick="event.stopPropagation(); openBatchModal('ml-worker', 'PyPI', 'services/ml_worker/pyproject.toml', 'poetry add pydantic@^2.7.2 redis@^5.0.4')">
+<svg fill="none" height="11" stroke="currentColor" stroke-width="1.75" viewbox="0 0 16 16" width="11">
+<rect height="8" rx="1.5" width="8" x="5" y="5"></rect>
+<path d="M3 11V3.5C3 2.67157 3.67157 2 4.5 2H11" stroke-linecap="round"></path>
+</svg>
+              Update All
+            </button>
+</div>
+</div>
+<div class="project-deps">
+<!-- Row 5: pydantic -->
+<div class="dep-row-wrap" data-pkg="pydantic" data-status="risk">
+<div class="dep-row" onclick="toggleDrawer('drawer-pydantic', this)">
+<div class="col-pkg">
+<span>pydantic</span>
+</div>
+<div class="col-versions">
+<span class="ver-current">2.6.4</span>
+<span class="ver-arrow">→</span>
+<span class="ver-target">2.7.2</span>
+</div>
+<div class="col-risk">
+<span class="dot dot-risk"></span>
+<span class="risk-label">minor</span>
+</div>
+<div class="col-insight">
+<span class="ai-prefix-icon">AI</span>
+<span class="insight-text">Deprecates @validator in favor of @field_validator with pending removal</span>
+</div>
+<div class="col-actions">
+<button class="icon-btn" onclick="event.stopPropagation(); copyCommand('poetry add pydantic@^2.7.2')" title="Copy CLI Command">
+<svg fill="none" height="12" stroke="currentColor" stroke-width="1.75" viewbox="0 0 16 16" width="12">
+<rect height="8" rx="1.5" width="8" x="5" y="5"></rect>
+<path d="M3 11V3.5C3 2.67157 3.67157 2 4.5 2H11" stroke-linecap="round"></path>
+</svg>
+</button>
+<span class="icon-btn chevron-icon">
+<svg fill="none" height="10" stroke="currentColor" stroke-width="2" viewbox="0 0 16 16" width="10">
+<path d="M4 6L8 10L12 6" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+</span>
+</div>
+</div>
+<div class="dep-drawer" id="drawer-pydantic">
+<div class="drawer-grid">
+<div>
+<div class="drawer-section-title">AI Changelog &amp; Impact Analysis</div>
+<div class="drawer-summary-card">
+<div class="drawer-summary-title">Validator Decorator Deprecations</div>
+<div class="drawer-summary-desc">
+                      While backward-compatible in 2.7.x, legacy V1 root validator decorators raise loud deprecation warnings and will be completely removed in Pydantic 3.0.
+                    </div>
+</div>
+<div class="drawer-meta-links">
+<a class="drawer-link" href="https://docs.pydantic.dev/latest/migration/" target="_blank">Migration Docs ↗</a>
+</div>
+</div>
+<div class="cli-box">
+<div>
+<div class="drawer-section-title">Quick Update Command</div>
+<div class="cli-command-row">
+<span class="cli-command-text">poetry add pydantic@^2.7.2</span>
+<button class="copy-pill-btn" onclick="copyCommand('poetry add pydantic@^2.7.2')">Copy</button>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Row 6: redis -->
+<div class="dep-row-wrap" data-pkg="redis" data-status="safe">
+<div class="dep-row" onclick="toggleDrawer('drawer-redis', this)">
+<div class="col-pkg">
+<span>redis</span>
+</div>
+<div class="col-versions">
+<span class="ver-current">5.0.1</span>
+<span class="ver-arrow">→</span>
+<span class="ver-target">5.0.4</span>
+</div>
+<div class="col-risk">
+<span class="dot dot-safe"></span>
+<span class="risk-label">patch</span>
+</div>
+<div class="col-insight">
+<span class="ai-prefix-icon">AI</span>
+<span class="insight-text">Connection pool recovery after transient network disconnects</span>
+</div>
+<div class="col-actions">
+<button class="icon-btn" onclick="event.stopPropagation(); copyCommand('poetry add redis@^5.0.4')" title="Copy CLI Command">
+<svg fill="none" height="12" stroke="currentColor" stroke-width="1.75" viewbox="0 0 16 16" width="12">
+<rect height="8" rx="1.5" width="8" x="5" y="5"></rect>
+<path d="M3 11V3.5C3 2.67157 3.67157 2 4.5 2H11" stroke-linecap="round"></path>
+</svg>
+</button>
+<span class="icon-btn chevron-icon">
+<svg fill="none" height="10" stroke="currentColor" stroke-width="2" viewbox="0 0 16 16" width="10">
+<path d="M4 6L8 10L12 6" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+</span>
+</div>
+</div>
+<div class="dep-drawer" id="drawer-redis">
+<div class="drawer-grid">
+<div>
+<div class="drawer-section-title">AI Changelog &amp; Impact Analysis</div>
+<div class="drawer-summary-card">
+<div class="drawer-summary-title">Patch maintenance</div>
+<div class="drawer-summary-desc">
+                      Fixes an infinite retry loop during sentinel failover events. Highly recommended for background queue stability.
+                    </div>
+</div>
+</div>
+<div class="cli-box">
+<div>
+<div class="drawer-section-title">Quick Update Command</div>
+<div class="cli-command-row">
+<span class="cli-command-text">poetry add redis@^5.0.4</span>
+<button class="copy-pill-btn" onclick="copyCommand('poetry add redis@^5.0.4')">Copy</button>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- PROJECT 4: auth-gateway -->
+<div class="project-card" data-project="auth-gateway">
+<div class="project-header" onclick="toggleProject(this)">
+<div class="project-title-area">
+<span class="accordion-toggle">
+<svg fill="none" height="10" stroke="currentColor" stroke-width="2" viewbox="0 0 16 16" width="10">
+<path d="M4 6L8 10L12 6" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+</span>
+<span class="ecosystem-pill">Go</span>
+<span class="project-name">auth-gateway</span>
+<span class="project-path">gateway/go.mod</span>
+</div>
+<div class="project-header-right">
+<div class="project-counts">
+<span><i class="dot dot-risk"></i> 1 at-risk</span>
+</div>
+<button class="update-all-btn" onclick="event.stopPropagation(); openBatchModal('auth-gateway', 'Go', 'gateway/go.mod', 'go get github.com/gin-gonic/gin@v1.10.0')">
+<svg fill="none" height="11" stroke="currentColor" stroke-width="1.75" viewbox="0 0 16 16" width="11">
+<rect height="8" rx="1.5" width="8" x="5" y="5"></rect>
+<path d="M3 11V3.5C3 2.67157 3.67157 2 4.5 2H11" stroke-linecap="round"></path>
+</svg>
+              Update All
+            </button>
+</div>
+</div>
+<div class="project-deps">
+<!-- Row 7: gin-gonic/gin -->
+<div class="dep-row-wrap" data-pkg="gin-gonic/gin" data-status="risk">
+<div class="dep-row" onclick="toggleDrawer('drawer-gin', this)">
+<div class="col-pkg">
+<span>gin-gonic/gin</span>
+</div>
+<div class="col-versions">
+<span class="ver-current">v1.9.1</span>
+<span class="ver-arrow">→</span>
+<span class="ver-target">v1.10.0</span>
+</div>
+<div class="col-risk">
+<span class="dot dot-risk"></span>
+<span class="risk-label">minor</span>
+</div>
+<div class="col-insight">
+<span class="ai-prefix-icon">AI</span>
+<span class="insight-text">Tighter path traversal checks &amp; updated internal mime-type detection</span>
+</div>
+<div class="col-actions">
+<button class="icon-btn" onclick="event.stopPropagation(); copyCommand('go get github.com/gin-gonic/gin@v1.10.0')" title="Copy CLI Command">
+<svg fill="none" height="12" stroke="currentColor" stroke-width="1.75" viewbox="0 0 16 16" width="12">
+<rect height="8" rx="1.5" width="8" x="5" y="5"></rect>
+<path d="M3 11V3.5C3 2.67157 3.67157 2 4.5 2H11" stroke-linecap="round"></path>
+</svg>
+</button>
+<span class="icon-btn chevron-icon">
+<svg fill="none" height="10" stroke="currentColor" stroke-width="2" viewbox="0 0 16 16" width="10">
+<path d="M4 6L8 10L12 6" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+</span>
+</div>
+</div>
+<div class="dep-drawer" id="drawer-gin">
+<div class="drawer-grid">
+<div>
+<div class="drawer-section-title">AI Changelog &amp; Impact Analysis</div>
+<div class="drawer-summary-card">
+<div class="drawer-summary-title">Security &amp; Behavior Adjustments</div>
+<div class="drawer-summary-desc">
+                      Fixes router path cleaning when wildcard parameters contain URL-encoded slashes (<code>%2F</code>). If custom routing middleware relied on raw path segments, verify test suites.
+                    </div>
+</div>
+<div class="drawer-meta-links">
+<a class="drawer-link" href="https://github.com/gin-gonic/gin/releases/tag/v1.10.0" target="_blank">Release Notes ↗</a>
+</div>
+</div>
+<div class="cli-box">
+<div>
+<div class="drawer-section-title">Quick Update Command</div>
+<div class="cli-command-row">
+<span class="cli-command-text">go get github.com/gin-gonic/gin@v1.10.0</span>
+<button class="copy-pill-btn" onclick="copyCommand('go get github.com/gin-gonic/gin@v1.10.0')">Copy</button>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- PROJECT 5: core-utils -->
+<div class="project-card" data-project="core-utils">
+<div class="project-header" onclick="toggleProject(this)">
+<div class="project-title-area">
+<span class="accordion-toggle">
+<svg fill="none" height="10" stroke="currentColor" stroke-width="2" viewbox="0 0 16 16" width="10">
+<path d="M4 6L8 10L12 6" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+</span>
+<span class="ecosystem-pill">Cargo</span>
+<span class="project-name">core-utils</span>
+<span class="project-path">crates/core/Cargo.toml</span>
+</div>
+<div class="project-header-right">
+<div class="project-counts">
+<span><i class="dot dot-safe"></i> 1 safe</span>
+</div>
+<button class="update-all-btn" onclick="event.stopPropagation(); openBatchModal('core-utils', 'Cargo', 'crates/core/Cargo.toml', 'cargo update -p serde --precise 1.0.204')">
+<svg fill="none" height="11" stroke="currentColor" stroke-width="1.75" viewbox="0 0 16 16" width="11">
+<rect height="8" rx="1.5" width="8" x="5" y="5"></rect>
+<path d="M3 11V3.5C3 2.67157 3.67157 2 4.5 2H11" stroke-linecap="round"></path>
+</svg>
+              Update All
+            </button>
+</div>
+</div>
+<div class="project-deps">
+<!-- Row 8: serde -->
+<div class="dep-row-wrap" data-pkg="serde" data-status="safe">
+<div class="dep-row" onclick="toggleDrawer('drawer-serde', this)">
+<div class="col-pkg">
+<span>serde</span>
+</div>
+<div class="col-versions">
+<span class="ver-current">1.0.198</span>
+<span class="ver-arrow">→</span>
+<span class="ver-target">1.0.204</span>
+</div>
+<div class="col-risk">
+<span class="dot dot-safe"></span>
+<span class="risk-label">patch</span>
+</div>
+<div class="col-insight">
+<span class="ai-prefix-icon">AI</span>
+<span class="insight-text">Routine maintenance: documentation polish and compiler diagnostic improvements</span>
+</div>
+<div class="col-actions">
+<button class="icon-btn" onclick="event.stopPropagation(); copyCommand('cargo update -p serde')" title="Copy CLI Command">
+<svg fill="none" height="12" stroke="currentColor" stroke-width="1.75" viewbox="0 0 16 16" width="12">
+<rect height="8" rx="1.5" width="8" x="5" y="5"></rect>
+<path d="M3 11V3.5C3 2.67157 3.67157 2 4.5 2H11" stroke-linecap="round"></path>
+</svg>
+</button>
+<span class="icon-btn chevron-icon">
+<svg fill="none" height="10" stroke="currentColor" stroke-width="2" viewbox="0 0 16 16" width="10">
+<path d="M4 6L8 10L12 6" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+</span>
+</div>
+</div>
+<div class="dep-drawer" id="drawer-serde">
+<div class="drawer-grid">
+<div>
+<div class="drawer-section-title">AI Changelog &amp; Impact Analysis</div>
+<div class="drawer-summary-card">
+<div class="drawer-summary-title">Rust 2024 Edition compatibility preparation</div>
+<div class="drawer-summary-desc">
+                      Internal macro code cleanup. Zero API changes, full backward and forward compatibility.
+                    </div>
+</div>
+</div>
+<div class="cli-box">
+<div>
+<div class="drawer-section-title">Quick Update Command</div>
+<div class="cli-command-row">
+<span class="cli-command-text">cargo update -p serde</span>
+<button class="copy-pill-btn" onclick="copyCommand('cargo update -p serde')">Copy</button>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div> <div id="emptyState">
+<div class="empty-state-icon">
+<svg fill="none" height="20" stroke="currentColor" stroke-width="1.75" viewbox="0 0 16 16" width="20">
+<circle cx="7" cy="7" r="4.5"></circle>
+<path d="M10.5 10.5L14 14" stroke-linecap="round"></path>
+</svg>
+</div>
+<div class="empty-state-title">No dependencies match your query</div>
+<div class="empty-state-desc">Try clearing your search query or switching filter tabs to inspect dependencies across your workspaces.</div>
+<button class="empty-reset-btn" id="resetFiltersBtn" onclick="resetAllFilters()">
+<svg fill="none" height="12" stroke="currentColor" stroke-width="1.75" viewbox="0 0 16 16" width="12">
+<path d="M2 8a6 6 0 1 1 1.76 4.24" stroke-linecap="round" stroke-linejoin="round"></path>
+<path d="M2 12V8h4" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+        Reset filters
+      </button>
+</div>
+</main>
+<!-- Sticky / Bottom Footer -->
+<footer>
+<div class="container footer-inner">
+<div>
+        RustyDeps Local Report • SemVer Intelligence Engine
+      </div>
+<div class="footer-hints">
+<span class="kbd-hint"><span class="kbd">/</span> search</span>
+<span class="kbd-hint"><span class="kbd">esc</span> clear</span>
+<span class="kbd-hint"><span class="kbd">click</span> inspect</span>
+</div>
+</div>
+</footer>
+<!-- Toast Notification -->
+<!-- Project Batch Update Popover / Modal -->
+<div class="modal-backdrop" id="batchModal" onclick="handleBackdropClick(event)">
+<div class="modal-dialog">
+<div class="modal-header">
+<div class="modal-title-wrap">
+<span class="ecosystem-pill" id="modalEcosystemPill">Cargo</span>
+<span class="modal-title" id="modalProjectTitle">Update backend-api</span>
+</div>
+<button class="modal-close-btn" onclick="closeBatchModal()" title="Close (Esc)">
+<svg fill="none" height="14" stroke="currentColor" stroke-width="1.75" viewbox="0 0 16 16" width="14">
+<path d="M4 4L12 12M12 4L4 12" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+</button>
+</div>
+<div class="modal-body">
+<div class="modal-meta-path">Manifest: <code id="modalManifestPath" style="color: #f4f4f5;">services/backend/Cargo.toml</code></div>
+<p style="font-size: 12px; color: var(--text-secondary); margin-bottom: 10px;">
+          Combined batch command to update all targeted dependencies in this workspace:
+        </p>
+<div class="modal-cmd-block">
+<span class="terminal-prompt-prefix">$</span><span id="modalCommandText">cargo update -p tokio --precise 2.0.0 &amp;&amp; cargo update -p axum --precise 0.7.7</span>
+</div>
+<div style="font-size: 11.5px; color: var(--text-muted); display: flex; align-items: center; gap: 6px;">
+<svg fill="none" height="12" stroke="#fbbf24" stroke-width="1.75" viewbox="0 0 16 16" width="12">
+<circle cx="8" cy="8" r="6"></circle>
+<path d="M8 5v3.5M8 11.5v.5" stroke-linecap="round"></path>
+</svg>
+<span>Ensure unit and integration test suites run cleanly after running batch updates.</span>
+</div>
+</div>
+<div class="modal-footer">
+<button class="btn-secondary" onclick="closeBatchModal()">Dismiss</button>
+<button class="btn-primary" id="modalCopyBtn" onclick="copyBatchModalCommand()">
+<svg fill="none" height="12" stroke="currentColor" stroke-width="1.75" viewbox="0 0 16 16" width="12">
+<rect height="8" rx="1.5" width="8" x="5" y="5"></rect>
+<path d="M3 11V3.5C3 2.67157 3.67157 2 4.5 2H11" stroke-linecap="round"></path>
+</svg>
+          Copy Combined Command
+        </button>
+</div>
+</div>
+</div><div id="toast">
+<svg fill="none" height="14" stroke="#10b981" stroke-width="2" viewbox="0 0 16 16" width="14">
+<path d="M3 8.5L6.5 12L13 4.5" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+<span id="toastMessage">Command copied to clipboard</span>
+</div>
+<script>
+    // 1. Toast notification handler
+    let toastTimeout;
+    function showToast(message) {
+      const toast = document.getElementById('toast');
+      const toastMsg = document.getElementById('toastMessage');
+      toastMsg.textContent = message;
+      toast.classList.add('show');
+
+      clearTimeout(toastTimeout);
+      toastTimeout = setTimeout(() => {
+        toast.classList.remove('show');
+      }, 2200);
+    }
+
+    // 2. Clipboard copy handler
+    function copyCommand(command, context) {
+      if (navigator.clipboard) {
+        navigator.clipboard.writeText(command).then(() => {
+          showToast(`Copied: "${command}"`);
+        }).catch(() => {
+          fallbackCopy(command);
+        });
+      } else {
+        fallbackCopy(command);
+      }
+    }
+
+    function fallbackCopy(text) {
+      const textarea = document.createElement('textarea');
+      textarea.value = text;
+      document.body.appendChild(textarea);
+      textarea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textarea);
+      showToast(`Copied: "${text}"`);
+    }
+
+    // 3. Project Accordion Toggle
+    function toggleProject(headerEl) {
+      const card = headerEl.closest('.project-card');
+      card.classList.toggle('collapsed');
+      updateCollapseBtnText();
+    }
+
+    // 4. Dependency Row Inline Drawer Toggle
+    function toggleDrawer(drawerId, rowEl) {
+      const drawer = document.getElementById(drawerId);
+      if (!drawer) return;
+      const isOpen = drawer.classList.contains('active');
+
+      // Close other drawers in the same project card for ultra clean focus
+      const card = rowEl.closest('.project-card');
+      card.querySelectorAll('.dep-drawer').forEach(d => {
+        if (d.id !== drawerId) d.classList.remove('active');
+      });
+      card.querySelectorAll('.dep-row').forEach(r => {
+        if (r !== rowEl) r.classList.remove('expanded');
+      });
+
+      if (isOpen) {
+        drawer.classList.remove('active');
+        rowEl.classList.remove('expanded');
+      } else {
+        drawer.classList.add('active');
+        rowEl.classList.add('expanded');
+      }
+    }
+
+    // 5. Global Collapse / Expand All
+    const collapseAllBtn = document.getElementById('collapseAllBtn');
+    let allCollapsed = false;
+
+    function updateCollapseBtnText() {
+      const cards = document.querySelectorAll('.project-card');
+      const collapsedCount = document.querySelectorAll('.project-card.collapsed').length;
+      allCollapsed = collapsedCount === cards.length;
+      collapseAllBtn.innerHTML = allCollapsed
+        ? `<svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.75"><path d="M3 6L8 11L13 6" stroke-linecap="round" stroke-linejoin="round"/></svg> Expand All`
+        : `<svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.75"><path d="M3 10L8 5L13 10" stroke-linecap="round" stroke-linejoin="round"/></svg> Collapse All`;
+    }
+
+    collapseAllBtn.addEventListener('click', () => {
+      const cards = document.querySelectorAll('.project-card');
+      allCollapsed = !allCollapsed;
+      cards.forEach(card => {
+        if (allCollapsed) {
+          card.classList.add('collapsed');
+        } else {
+          card.classList.remove('collapsed');
+        }
+      });
+      updateCollapseBtnText();
+    });
+
+    // 6. Filtering Logic (Tabs + Header Badges)
+    let currentFilter = 'all';
+
+    function setFilter(filter) {
+      currentFilter = filter;
+      document.querySelectorAll('.filter-tab').forEach(tab => {
+        tab.classList.toggle('active', tab.getAttribute('data-filter') === filter);
+      });
+      applyFilters();
+    }
+
+    document.querySelectorAll('.filter-tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        setFilter(tab.getAttribute('data-filter'));
+      });
+    });
+
+    document.querySelectorAll('.dot-badge').forEach(badge => {
+      badge.addEventListener('click', () => {
+        const targetFilter = badge.getAttribute('data-filter');
+        setFilter(currentFilter === targetFilter ? 'all' : targetFilter);
+      });
+    });
+
+    // 7. Live Search & Combined Filtering
+    const searchInput = document.getElementById('searchInput');
+
+    function applyFilters() {
+      const query = searchInput.value.toLowerCase().trim();
+      const projectCards = document.querySelectorAll('.project-card');
+
+      projectCards.forEach(card => {
+        const rows = card.querySelectorAll('.dep-row-wrap');
+        let visibleInProject = 0;
+
+        rows.forEach(row => {
+          const status = row.getAttribute('data-status');
+          const text = row.textContent.toLowerCase();
+
+          const matchesFilter = (currentFilter === 'all') || (status === currentFilter);
+          const matchesSearch = query === '' || text.includes(query);
+
+          if (matchesFilter && matchesSearch) {
+            row.style.display = 'block';
+            visibleInProject++;
+          } else {
+            row.style.display = 'none';
+          }
+        });
+
+        // If no rows match inside this card, hide the whole card
+        card.style.display = visibleInProject > 0 ? 'block' : 'none';
+      });
+    }
+
+    searchInput.addEventListener('input', applyFilters);
+
+    // 8. Keyboard Shortcuts
+    window.addEventListener('keydown', (e) => {
+      if (e.key === '/' && document.activeElement !== searchInput) {
+        e.preventDefault();
+        searchInput.focus();
+        searchInput.select();
+      } else if (e.key === 'Escape') {
+        if (document.activeElement === searchInput) {
+          searchInput.value = '';
+          searchInput.blur();
+          applyFilters();
+        } else {
+          // Close open drawers
+          document.querySelectorAll('.dep-drawer.active').forEach(d => d.classList.remove('active'));
+          document.querySelectorAll('.dep-row.expanded').forEach(r => r.classList.remove('expanded'));
+        }
+      }
+    });
+  </script>
+</body>
+</html>

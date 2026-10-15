@@ -9,6 +9,10 @@
 /reports/
 *.html
 !doc/**/*.html
+# Askama report template (source, not generated output)
+!templates/**/*.html
+# Raw Stitch design export kept as a reference input
+!src/templates/**/*.html
 
 # Editor / OS noise
 .DS_Store

@@ -31,22 +31,22 @@ CLI (clap)
 
 ## Modules
 
-> Status: the CLI, filesystem walk, manifest parsers, registry clients, and
-> SemVer classifier below are implemented (Phases 1–3); the AI module exists as
-> a Phase 3 scaffold. The report module remains planned.
+> Status: the CLI, filesystem walk, manifest parsers, registry clients,
+> SemVer classifier, and HTML report engine below are implemented (Phases 1–4);
+> the AI module is a Phase 3 scaffold with live providers still to come.
 
 ### CLI (`src/cli.rs`, `src/main.rs`)
 
 Built with `clap` (derive pattern). The `scan` subcommand takes a root `path`
-(default `.`), `--ai`, `--output`/`-o` (default `report.html`), `--format
-html|json`, `--offline`/`--no-fetch`, and `--verbose`/`-v`. `main` is
+(default `.`), `--ai`, `--output`/`-o` (default `rustydeps-report.html`),
+`--format html|json`, `--offline`/`--no-fetch`, and `--verbose`/`-v`. `main` is
 `#[tokio::main]` and returns `anyhow::Result`; it initializes
 `tracing-subscriber` (logs go to stderr so stdout stays clean for `--format
 json`) and dispatches the subcommand. On text runs it prints the "Full Block
 Solid" ASCII banner (Rust-orange logo, cyan version, grey tagline); the banner
 is suppressed for `--format json` and its colours drop out when stdout is not a
-terminal. `--offline` skips registry lookups. *`--output` is accepted but not yet
-wired to the Phase 4 report engine.*
+terminal. `--offline` skips registry lookups. For `--format html` it writes the
+self-contained report to `--output` and prints a `file://` URL to open it.
 
 ### Filesystem walk (`src/scanner.rs`)
 
@@ -137,13 +137,16 @@ release. `classify` builds the `ClassifiedDependency` result set. See
 
 ### Report generator (`src/report/`)
 
-Renders a single self-contained, interactive HTML file from the in-memory
-result set — filter and sort by ecosystem, severity, and repository. Requires no
-network access to view and opens straight from disk.
-
-The template design (palette, project-centric component hierarchy, risk
-indicators, inline drawer, filter/search, empty state) is fixed by
-[[html-report-spec]]; treat that page as the report generator's design contract.
+Implemented in Phase 4. `ReportData::from_classified` groups the classified set
+by project/manifest (project name from the manifest's directory) and
+`render_html` renders the Askama template (`templates/report.html` — the Google
+Stitch UI v4 export with its mock rows replaced by loops) into a single
+self-contained HTML file: all CSS and vanilla JavaScript are inline, so it opens
+offline with no network access. Rows carry a copyable per-ecosystem update
+command and each project exposes an "Update All" command. See
+[[phase-4-html-report]]; the template design (palette, project-centric component
+hierarchy, risk indicators, inline drawer, filter/search, empty state) is fixed
+by [[html-report-spec]].
 
 ### AI module (`src/ai/`)
 
@@ -188,5 +191,6 @@ Phase 4 report.
 - [[roadmap]] — phase plan that builds these modules in order.
 - [[phase-2-parsers-registry]] — the implemented parser and registry clients.
 - [[phase-3-semver-classifier]] — the classifier, AI scaffold, and CLI polish.
+- [[phase-4-html-report]] — the self-contained HTML report engine.
 - [[okf-compliance]] — how this documentation is licensed and validated.
 - [[index]] — knowledge-graph entrypoint.

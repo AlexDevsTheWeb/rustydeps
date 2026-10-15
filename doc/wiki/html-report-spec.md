@@ -14,9 +14,8 @@ tags: [report, ui, design, spec, html, phase-4]
 
 The interactive HTML report is the user-facing output of a RustyDeps scan. It is
 built in Phase 4 (see [[roadmap]]) by the report generator described in
-[[architecture]]. Its design was finalized through an iterative Google Stitch
-process; the final raw prompt is
-`doc/raw/2026-10-15/opencode-prompt-wiki-html-spec.md`.
+[[architecture]] and implemented in [[phase-4-html-report]]; the final raw
+prompt is `doc/raw/2026-10-15/opencode-prompt-wiki-html-spec.md`.
 
 This page is the design contract for the generator: it fixes the visual
 language, the component hierarchy, and the interaction model so the
@@ -154,8 +153,11 @@ the combined update commands for that manifest (e.g.
 ## Related
 
 - [[architecture]] — the report generator module this specification drives.
+- [[phase-4-html-report]] — the implementation of this specification.
 - [[roadmap]] — Phase 4, "Interactive HTML Report Engine".
 - [[okf-compliance]] — licensing and validation of this wiki.
 - [[index]] — knowledge-graph entrypoint.
 - `doc/raw/2026-10-15/opencode-prompt-wiki-html-spec.md` — the raw prompt that
   led to this spec.
+- `doc/raw/2026-10-15/opencode-prompt-stitch-integration.md` — the brief for
+  adopting the Stitch UI v4 HTML export as the implementation template.
