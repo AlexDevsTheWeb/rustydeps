@@ -32,7 +32,8 @@ Commits on the branch:
 - **`.dockerignore`** — context trimmed to `Cargo.toml`, `Cargo.lock`, `src/`
   and `templates/`.
 - **`.github/workflows/docker.yml`** — build on `main` pushes, `v*` tags and
-  PRs to `main`; QEMU + Buildx; GHCR login with `GITHUB_TOKEN`; metadata tags
+  PRs to `main` and `development`; QEMU + Buildx; GHCR login with `GITHUB_TOKEN`;
+  metadata tags
   `latest`/branch/semver/`pr-<n>`; pushes `linux/amd64` + `linux/arm64`, while
   PRs load a single-platform image and smoke-test it.
 - **`README.md`** — Docker badge, `## Docker` section (run commands, GitLab CI
@@ -52,6 +53,14 @@ Commits on the branch:
    than only building it, so a missing shared library fails review.
 4. The report path requested by the brief (`doc/raw/2026-10-15/…`) is used
    instead of the repo's usual `doc/raw/development-report-<TIMESTAMP>.md`.
+5. The pull-request trigger covers `main` **and** `development`: feature branches
+   integrate into `development` here, so a `main`-only filter meant the build
+   test never ran on the PR that adds it.
+
+> Correction (same work step, before review): deviation 5 was added after the
+> first push, when the PR workflow run was absent because this repository PRs
+> into `development`. The workflow comment, this report, the wiki pages and the
+> PR body were updated together.
 
 ## Tests executed
 

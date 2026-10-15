@@ -60,19 +60,25 @@ no template directory.
 ### Workflow
 
 Triggered by pushes to `main`, pushes of `v*` tags, and pull requests targeting
-`main`. Steps: checkout, compute a lowercase image reference, QEMU + Buildx
-setup, GHCR login (`GITHUB_TOKEN`, skipped on pull requests), `docker/metadata-action`
-tag extraction, and `docker/build-push-action`.
+`main` or `development` (`development` is this repository's integration branch,
+so a feature PR's build test would otherwise never run). Steps: checkout,
+compute a lowercase image reference, QEMU + Buildx setup, GHCR login
+(`GITHUB_TOKEN`, skipped on pull requests), `docker/metadata-action` tag
+extraction, and `docker/build-push-action`.
 
 | Context | Platforms | Push | Tags |
 |---------|-----------|------|------|
-| PR to `main` | `linux/amd64` | no (`load: true`) | `pr-<n>` |
+| PR to `main`/`development` | `linux/amd64` | no (`load: true`) | `pr-<n>` |
 | Push to `main` | `linux/amd64`, `linux/arm64` | yes | `main`, `latest` |
 | Push of `v*` | `linux/amd64`, `linux/arm64` | yes | `1.2.3`, `1.2`, `latest` |
 
 Pull requests load the single-platform image into the runner's daemon and run
 `--version` plus an offline scan of the checkout, so a missing shared library or
 a broken entrypoint fails review rather than surfacing after merge.
+
+`development` is in the pull-request filter because feature branches integrate
+there rather than into `main`; without it a feature PR would build no image at
+all.
 
 ## Design decisions
 

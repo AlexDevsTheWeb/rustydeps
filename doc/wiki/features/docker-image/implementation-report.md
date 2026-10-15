@@ -38,7 +38,7 @@ requires a shell in the image.
   `docs/`, `.claude/`, `tmp/`, `*.html`, `*.md`, and editor/OS noise, keeping
   `Cargo.toml`, `Cargo.lock`, `src/` and `templates/` in the context.
 - `.github/workflows/docker.yml` (new) — build on `main` pushes, `v*` tags and
-  PRs to `main`; QEMU + Buildx; GHCR login with `GITHUB_TOKEN`
+  PRs to `main` and `development`; QEMU + Buildx; GHCR login with `GITHUB_TOKEN`
   (`packages: write`); metadata tags `latest`/branch/semver/`pr-<n>`; publish
   `linux/amd64` + `linux/arm64` on non-PR events, single-platform `load` plus a
   `--version`/offline-scan smoke test on PRs; `type=gha` cache.

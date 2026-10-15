@@ -304,7 +304,7 @@ Applied `doc/raw/2026-10-15/opencode-prompt-08-issue15-docker.md` (issue #15,
 - `.dockerignore` (new) — keeps the build context to `Cargo.toml`,
   `Cargo.lock`, `src/` and `templates/`.
 - `.github/workflows/docker.yml` (new) — builds on `main` pushes, `v*` tags and
-  PRs to `main`; QEMU + Buildx; GHCR login via `GITHUB_TOKEN`; publishes
+  PRs to `main` and `development`; QEMU + Buildx; GHCR login via `GITHUB_TOKEN`; publishes
   `linux/amd64` + `linux/arm64` tagged `latest`/branch/semver, and on PRs loads
   a single-platform image and smoke-tests it instead of pushing.
 - `README.md` — Docker workflow badge, a `## Docker` section (run commands,
@@ -337,5 +337,25 @@ the unverified gates, the two brief deviations (rolling `alpine:3`, distroless
 rejected), and the deferred work.
 
 Validation: OKF validator PASSED (0 errors, 0 warnings).
+
+## 2026-10-15 — Docker build test on PRs into `development`
+
+Corrected the trigger for the new workflow: the pull-request filter was
+`main`-only, but feature branches integrate into `development` in this
+repository, so the image build test would not have run on the PR that adds it.
+`.github/workflows/docker.yml` now lists `branches: [main, development]` for
+`pull_request`, and its header comment no longer claims pull requests build both
+architectures (they build `linux/amd64` and load it for the smoke test). Push
+triggers are unchanged: `main` plus `v*` tags, so `latest` still comes from the
+default branch.
+
+Also corrected in the same step: [[docker-image]] (trigger prose and the event
+table), the docker-image implementation report, the `log.md` entry above, and
+`doc/raw/2026-10-15/2026-10-15-issue15-docker.md` (deviation 5 plus a correction
+note; the raw correction is flagged inline because raw documents are otherwise
+immutable).
+
+Validation: workflow YAML parses and both `run:` blocks still pass `bash -n`;
+OKF validator PASSED (0 errors, 0 warnings).
 
 
