@@ -259,4 +259,28 @@ Opened draft PR #9 (`feat/auto-open` → `development`).
 
 Validation: OKF validator PASSED (0 errors, 0 warnings).
 
+## 2026-10-15 — Release automation and README
+
+Applied `doc/raw/2026-10-15/2026-10-15-phase7-release.md` (titled "Phase 6";
+treated as release tooling, not a roadmap phase):
+
+- `README.md` — full rewrite: ASCII banner, v0.1.0/license/Rust/Release badges,
+  the live website link, a supported-ecosystems table, a risk legend,
+  quickstart/usage, the feature overview, and releasing/development/license
+  sections.
+- `.github/workflows/release.yml` (new) — tag-triggered (`v*`) release: a
+  three-target build matrix (`x86_64-unknown-linux-gnu`, `x86_64-apple-darwin`,
+  `aarch64-apple-darwin`), tar.gz + sha256 packaging, and a GitHub Release with
+  generated changelog notes and attached assets.
+- Added `features/release-automation/` with [[release-automation]] (feature
+  page) and its implementation report; updated [[index]].
+
+The `v0.1.0` tag is not pushed (the developer will push it after this lands on
+the default branch). Blank specifics in the brief were resolved by developer
+confirmation: `v*` trigger, gnu Linux + both macOS arches.
+
+Validation: workflow YAML parses and both `run:` blocks pass `bash -n`;
+`cargo fmt --all --check` clean; `cargo clippy --all-targets -- -D warnings`
+clean; `cargo test` 85 passed; OKF validator PASSED (0 errors, 0 warnings).
+
 
