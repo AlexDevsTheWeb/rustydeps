@@ -329,4 +329,13 @@ OpenSSL dependency; `docker.yml` parses as YAML and both `run:` blocks pass
 installed on the development machine, so the image build itself is first
 exercised by the new workflow.
 
+## 2026-10-15 — Docker image draft PR opened
+
+Opened draft PR #16 (`feat/docker-support` → `development`) and recorded the
+link in the docker-image implementation report's MR section. The PR body lists
+the unverified gates, the two brief deviations (rolling `alpine:3`, distroless
+rejected), and the deferred work.
+
+Validation: OKF validator PASSED (0 errors, 0 warnings).
+
 
