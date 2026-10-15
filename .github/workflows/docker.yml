@@ -5,16 +5,17 @@ name: Docker
 #
 #   * `main` pushes  -> publish, tagging `latest` (plus the branch name).
 #   * `v*` tag pushes -> publish, tagging the release versions (`1.2.3`, `1.2`).
-#   * pull requests   -> build both architectures but push nothing, then run
-#                        the image locally as a smoke test, so a broken
-#                        Dockerfile fails review instead of the registry.
+#   * pull requests into `main` or `development` -> build one architecture,
+#     push nothing, then run the image locally as a smoke test, so a broken
+#     Dockerfile fails review instead of the registry. `development` is
+#     included because feature branches integrate there, not into `main`.
 
 on:
   push:
     branches: [main]
     tags: ["v*"]
   pull_request:
-    branches: [main]
+    branches: [main, development]
 
 permissions:
   contents: read
