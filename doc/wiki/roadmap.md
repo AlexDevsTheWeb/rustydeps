@@ -14,7 +14,7 @@ tags: [roadmap, phases, planning]
 
 RustyDeps ships in six incremental phases. Each phase leaves the tool in a
 usable state and maps to modules described in [[architecture]]. Phases 1
-through 3 are complete; Phase 4 is next.
+through 4 are complete; Phase 5 is next.
 
 ## Phase status
 
@@ -23,8 +23,8 @@ through 3 are complete; Phase 4 is next.
 | 1 | Rust Setup & CLI (`clap` + `ignore`) | ✅ Done |
 | 2 | Parsers (Cargo & npm) & Registry HTTP Clients | ✅ Done |
 | 3 | Unified DTO & SemVer Logic | ✅ Done |
-| 4 | Interactive HTML Report Engine | Next |
-| 5 | AI Changelog Summarizer Module | Planned |
+| 4 | Interactive HTML Report Engine | ✅ Done |
+| 5 | AI Changelog Summarizer Module | Next |
 | 6 | Multi-ecosystem Expansion (PyPI, Go, Composer) | Planned |
 
 ## Phase 1 — Rust Setup & CLI ✅
@@ -55,10 +55,16 @@ latest-stable target, the CLI banner, the templated AI summary scaffold, and
 the DTOs (`src/classifier/tests.rs`). See [[phase-3-semver-classifier]] and
 `doc/raw/2026-10-15/2026-10-15-phase3.md`.
 
-## Phase 4 — Interactive HTML Report Engine
+## Phase 4 — Interactive HTML Report Engine ✅
 
-Render a self-contained, filterable/sortable HTML report from the result set.
-Exit criteria: a report opens offline and reflects a real scan.
+Built the report engine (`src/report/`) and the Askama template
+(`templates/report.html`) per [[html-report-spec]]: project-centric cards, Zinc
+dark mode, 6px risk dots, a discrete `AI` tag, an inline drawer with copyable
+update commands, search and risk filters, an empty state, and per-project
+"Update All". `scan --format html` writes a single self-contained
+`rustydeps-report.html`. Exit criteria met: the report opens offline and
+reflects a real scan. See [[phase-4-html-report]] and
+`doc/raw/2026-10-15/2026-10-15-phase4.md`.
 
 ## Phase 5 — AI Changelog Summarizer
 

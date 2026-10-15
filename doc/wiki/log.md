@@ -148,4 +148,28 @@ the Phase 3 implementation report's MR section.
 
 Validation: OKF validator PASSED (0 errors, 0 warnings).
 
+## 2026-10-15 — Phase 4: interactive HTML report engine
+
+Implemented the Phase 4 brief
+(`doc/raw/2026-10-15/2026-10-15-phase4.md`):
+
+- Added the feature subfolder `features/phase-4-html-report/` with
+  [[phase-4-html-report]] (feature page) and its implementation report.
+- `src/report/` — `ReportData`/`ProjectReport`/`DependencyReport`,
+  `from_classified` grouping, `render_html`, and tests.
+- `templates/report.html` — the Askama template implementing
+  [[html-report-spec]] with embedded CSS and vanilla JavaScript.
+- `src/cli.rs`, `src/main.rs` — `--output` defaults to
+  `rustydeps-report.html`; `--format html` writes the report and prints a
+  `file://` URL.
+- `Cargo.toml` — added `askama`. `.gitignore` — allow-listed
+  `templates/**/*.html` so the source template is tracked.
+- Updated [[architecture]] (report module), [[roadmap]] (Phase 4 ✅, Phase 5
+  next), [[index]] (feature row and Phase 4 source document), and
+  [[html-report-spec]] (now implemented).
+
+Validation: `cargo fmt --all --check` clean; `cargo clippy --all-targets -- -D
+warnings` clean; `cargo test` 56 passed; OKF validator PASSED (0 errors,
+0 warnings).
+
 
