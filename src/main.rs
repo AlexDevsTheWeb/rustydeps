@@ -141,7 +141,6 @@ async fn run_scan(args: ScanArgs) -> Result<()> {
             print_summary(&classified);
 
             let meta = ReportMeta {
-                scanned_root: Some(args.path.display().to_string()),
                 scan_duration_ms: Some(duration_ms),
             };
             let report = ReportData::from_classified(&classified, &meta);

@@ -119,16 +119,16 @@ fn groups_dependencies_by_manifest() {
         .find(|project| project.name == "backend-api")
         .expect("backend-api group");
     assert_eq!(backend.dependencies.len(), 2);
-    assert_eq!(backend.total, 2);
     assert_eq!(backend.breaking, 1);
-    assert_eq!(backend.ecosystems, vec!["CARGO"]);
+    assert_eq!(backend.ecosystem_label, "Cargo");
+    assert_eq!(backend.run_in, "backend-api");
 
     let web = data
         .projects
         .iter()
         .find(|project| project.name == "web-dashboard")
         .expect("web-dashboard group");
-    assert_eq!(web.ecosystems, vec!["NPM"]);
+    assert_eq!(web.ecosystem_label, "npm");
 }
 
 #[test]
@@ -166,20 +166,20 @@ fn builds_update_commands_per_ecosystem() {
     assert!(cargo
         .dependencies
         .iter()
-        .any(|dep| dep.update_command == "cargo update -p tokio --precise 1.53.3"));
+        .any(|dep| dep.command == "cargo update -p tokio --precise 1.53.3"));
 
     let npm = &data.projects[1];
     assert!(npm
         .dependencies
         .iter()
-        .any(|dep| dep.update_command == "npm install express@5.3.0"));
+        .any(|dep| dep.command == "npm install express@5.3.0"));
     let up_to_date = npm
         .dependencies
         .iter()
         .find(|dep| dep.name == "left-pad")
         .expect("left-pad");
-    assert!(!up_to_date.has_update_command);
-    assert!(up_to_date.update_command.is_empty());
+    assert!(!up_to_date.has_command);
+    assert!(up_to_date.command.is_empty());
 }
 
 #[test]
@@ -214,6 +214,27 @@ fn combines_the_update_all_command() {
 }
 
 #[test]
+fn builds_drawer_badges_and_ids() {
+    let dependencies = vec![dependency(
+        Ecosystem::Cargo,
+        "backend-api/Cargo.toml",
+        "tokio",
+        "1.35.1",
+        Some("2.0.0"),
+        UpdateType::Breaking,
+    )];
+
+    let data = ReportData::from_classified(&dependencies, &ReportMeta::default());
+    let row = &data.projects[0].dependencies[0];
+
+    assert!(row.has_bump_badge);
+    assert_eq!(row.bump_label, "Major Bump: 1.35.1 → 2.0.0");
+    assert_eq!(row.drawer_id, "drawer-0-0");
+    assert_eq!(row.status, "breaking");
+    assert_eq!(row.dot_class, "dot-breaking");
+}
+
+#[test]
 fn renders_risk_indicators_and_filter_pills() {
     let html = render(&[
         dependency(
@@ -242,17 +263,20 @@ fn renders_risk_indicators_and_filter_pills() {
         ),
     ]);
 
-    assert!(html.contains("risk-breaking"));
-    assert!(html.contains("risk-at-risk"));
-    assert!(html.contains("risk-safe"));
-    assert!(html.contains(">major<"));
-    assert!(html.contains(">minor<"));
-    assert!(html.contains(">patch<"));
-    // Filter pills and the empty-state block are part of the design contract.
-    assert!(html.contains("data-risk=\"all\""));
+    assert!(html.contains("dot-breaking"));
+    assert!(html.contains("dot-risk"));
+    assert!(html.contains("dot-safe"));
+    assert!(html.contains("risk-label"));
+    assert!(html.contains("data-status=\"breaking\""));
+    assert!(html.contains("data-status=\"risk\""));
+    // Filter tabs and the empty-state block are part of the design contract.
+    assert!(html.contains("data-filter=\"all\""));
+    assert!(html.contains("data-filter=\"breaking\""));
     assert!(html.contains("At-Risk"));
-    assert!(html.contains("id=\"empty-state\""));
-    assert!(html.contains("No dependencies match your filter"));
+    assert!(html.contains("id=\"emptyState\""));
+    assert!(html.contains("No dependencies match your query"));
+    // The batch-update modal from the design is present too.
+    assert!(html.contains("id=\"batchModal\""));
 }
 
 #[test]
@@ -269,7 +293,7 @@ fn renders_the_ai_tag_when_a_summary_is_present() {
 
     let html = render(&[dep]);
 
-    assert!(html.contains("class=\"ai-tag\">AI<"));
+    assert!(html.contains("class=\"ai-prefix-icon\">AI<"));
     assert!(html.contains("potential breaking API changes"));
 }
 
@@ -283,22 +307,16 @@ fn reports_an_empty_scan() {
 
     let html = data.render().expect("render empty report");
     assert!(html.contains("No dependencies found"));
-    // With nothing to hide, the filter empty state is not shown.
-    assert!(!html.contains("id=\"empty-state\" hidden"));
+    assert!(html.contains("id=\"emptyState\" style=\"display: block;\""));
 }
 
 #[test]
-fn surfaces_scan_metadata() {
+fn surfaces_the_scan_duration() {
     let meta = ReportMeta {
-        scanned_root: Some("/work/monorepo".to_string()),
         scan_duration_ms: Some(142),
     };
     let data = ReportData::from_classified(&[], &meta);
 
-    assert_eq!(data.scanned_root, "/work/monorepo");
     assert_eq!(data.duration_display, "142 ms");
-
-    let html = data.render().expect("render");
-    assert!(html.contains("/work/monorepo"));
-    assert!(html.contains("142 ms"));
+    assert!(data.render().expect("render").contains("142 ms"));
 }

@@ -2,9 +2,12 @@
 //!
 //! The report consumes the classified dependency set and renders a single
 //! self-contained HTML file: CSS and JavaScript are embedded inline, so the
-//! file opens offline in any browser with no CDN or network access. The visual
-//! contract is `doc/wiki/html-report-spec.md` (already reflected in the
-//! template).
+//! file opens offline in any browser with no CDN or network access.
+//!
+//! The template (`templates/report.html`) is the Google Stitch "UI v4" export
+//! (`src/templates/report_stitch.html`) with its static mock rows replaced by
+//! Askama loops over the data below. The visual contract is
+//! `doc/wiki/html-report-spec.md`.
 
 #[cfg(test)]
 mod tests;
@@ -20,8 +23,6 @@ use crate::model::{Ecosystem, UpdateType};
 /// Metadata about a scan, shown in the report header.
 #[derive(Debug, Clone, Default)]
 pub struct ReportMeta {
-    /// Root that was scanned.
-    pub scanned_root: Option<String>,
     /// Wall-clock duration of the scan and registry lookups, in milliseconds.
     pub scan_duration_ms: Option<u128>,
 }
@@ -35,22 +36,37 @@ pub struct DependencyReport {
     pub current_version: String,
     /// Latest version, or `unknown`.
     pub latest_display: String,
-    /// Whether the dependency is development-only.
-    pub is_dev_dependency: bool,
-    /// CSS/filter tag: `breaking`, `at-risk`, `safe`, `up-to-date`, or `unknown`.
-    pub risk_class: &'static str,
-    /// Human label for the risk, e.g. `major`.
+    /// Whether the target version is a breaking (major) jump.
+    pub is_breaking: bool,
+    /// Filter tag consumed by the report JS: `breaking`, `risk`, `safe`,
+    /// `up-to-date`, or `unknown`.
+    pub status: &'static str,
+    /// Whether the row carries a solid risk dot.
+    pub has_dot: bool,
+    /// Dot CSS class (`dot-breaking`/`dot-risk`/`dot-safe`).
+    pub dot_class: &'static str,
+    /// Risk label (`major`/`minor`/`patch`/`up-to-date`/`unknown`).
     pub risk_label: &'static str,
-    /// Whether the risk is one of the dotted levels.
-    pub has_risk_dot: bool,
-    /// Copyable CLI update command (empty when there is nothing to update).
-    pub update_command: String,
-    /// Whether [`Self::update_command`] is present.
-    pub has_update_command: bool,
-    /// One-line summary (empty when there is none).
-    pub ai_summary: String,
-    /// Whether [`Self::ai_summary`] is present.
+    /// Whether the insight column has text.
+    pub has_insight: bool,
+    /// Whether the insight is an AI summary (shows the `AI` prefix).
     pub has_ai_summary: bool,
+    /// One-line insight shown in the row.
+    pub insight: String,
+    /// Whether there is an update command to copy.
+    pub has_command: bool,
+    /// Copyable CLI update command (empty when there is nothing to update).
+    pub command: String,
+    /// Unique DOM id for the row's inline drawer.
+    pub drawer_id: String,
+    /// Whether the drawer shows a semver bump badge.
+    pub has_bump_badge: bool,
+    /// Semver bump badge text, e.g. `Major Bump: 1.35.1 → 2.0.0`.
+    pub bump_label: String,
+    /// Drawer summary title.
+    pub drawer_title: &'static str,
+    /// Drawer summary body.
+    pub drawer_desc: String,
 }
 
 /// One project card (one manifest) in the report.
@@ -60,20 +76,20 @@ pub struct ProjectReport {
     pub name: String,
     /// Path to the manifest.
     pub manifest_path: String,
-    /// Ecosystem badges present in the project.
-    pub ecosystems: Vec<&'static str>,
-    /// Number of dependencies in the project.
-    pub total: usize,
+    /// Ecosystem pill label, e.g. `Cargo` or `npm`.
+    pub ecosystem_label: &'static str,
+    /// Directory the update command should be run in.
+    pub run_in: String,
     /// Count of breaking updates.
     pub breaking: usize,
     /// Count of at-risk updates.
     pub at_risk: usize,
     /// Count of safe updates.
     pub safe: usize,
+    /// Whether the project has a combined update command.
+    pub has_update_all: bool,
     /// Combined update command for the whole manifest (empty when none).
     pub update_all_command: String,
-    /// Whether [`Self::update_all_command`] is present.
-    pub has_update_all: bool,
     /// The project's dependency rows.
     pub dependencies: Vec<DependencyReport>,
 }
@@ -88,34 +104,26 @@ pub struct ReportData {
     pub project_count: usize,
     /// Number of dependency rows.
     pub dependency_count: usize,
+    /// Scan duration for display, e.g. `142 ms` (or `—`).
+    pub duration_display: String,
     /// Total breaking updates.
     pub breaking: usize,
     /// Total at-risk updates.
     pub at_risk: usize,
     /// Total safe updates.
     pub safe: usize,
-    /// Total up-to-date dependencies.
-    pub up_to_date: usize,
-    /// Total unknown dependencies.
-    pub unknown: usize,
-    /// Root that was scanned (empty when unknown).
-    pub scanned_root: String,
-    /// Scan duration for display, e.g. `142 ms` (or `—`).
-    pub duration_display: String,
     /// Whether the scan produced any dependency at all.
     pub has_dependencies: bool,
     /// Project cards, sorted by manifest path.
     pub projects: Vec<ProjectReport>,
 }
 
-/// Per-update-type tally.
+/// Risk tally restricted to the three levels the report displays.
 #[derive(Debug, Default, Clone, Copy)]
 struct Tally {
     breaking: usize,
     at_risk: usize,
     safe: usize,
-    up_to_date: usize,
-    unknown: usize,
 }
 
 impl Tally {
@@ -124,13 +132,8 @@ impl Tally {
             UpdateType::Breaking => self.breaking += 1,
             UpdateType::AtRisk => self.at_risk += 1,
             UpdateType::Safe => self.safe += 1,
-            UpdateType::UpToDate => self.up_to_date += 1,
-            UpdateType::Unknown => self.unknown += 1,
+            UpdateType::UpToDate | UpdateType::Unknown => {}
         }
-    }
-
-    fn total(self) -> usize {
-        self.breaking + self.at_risk + self.safe + self.up_to_date + self.unknown
     }
 }
 
@@ -148,41 +151,51 @@ impl ReportData {
         let mut overall = Tally::default();
         let mut projects = Vec::with_capacity(groups.len());
 
-        for (manifest_path, dependencies) in &groups {
+        for (project_index, (manifest_path, dependencies)) in groups.iter().enumerate() {
             let mut tally = Tally::default();
-            let mut badges: Vec<&'static str> = Vec::new();
             let mut commands: Vec<String> = Vec::new();
             let mut rows = Vec::with_capacity(dependencies.len());
 
-            for dependency in dependencies {
+            for (dep_index, dependency) in dependencies.iter().enumerate() {
                 tally.add(dependency.update_type);
                 overall.add(dependency.update_type);
-
-                let badge = ecosystem_badge(dependency.ecosystem);
-                if !badges.contains(&badge) {
-                    badges.push(badge);
-                }
 
                 let command = actionable_command(dependency);
                 if !command.is_empty() {
                     commands.push(command.clone());
                 }
 
+                let latest = dependency.latest_version.clone();
+                let insight = dependency
+                    .ai_summary
+                    .clone()
+                    .unwrap_or_else(|| default_insight(dependency.update_type).to_string());
+                let is_breaking = dependency.update_type == UpdateType::Breaking;
+
                 rows.push(DependencyReport {
                     name: dependency.name.clone(),
                     current_version: dependency.current_version.clone(),
-                    latest_display: dependency
-                        .latest_version
-                        .clone()
-                        .unwrap_or_else(|| "unknown".to_string()),
-                    is_dev_dependency: dependency.is_dev_dependency,
-                    risk_class: risk_class(dependency.update_type),
+                    latest_display: latest.clone().unwrap_or_else(|| "unknown".to_string()),
+                    is_breaking,
+                    status: stitch_status(dependency.update_type),
+                    has_dot: has_risk_dot(dependency.update_type),
+                    dot_class: dot_class(dependency.update_type),
                     risk_label: risk_label(dependency.update_type),
-                    has_risk_dot: has_risk_dot(dependency.update_type),
-                    has_update_command: !command.is_empty(),
-                    update_command: command,
+                    has_insight: !insight.is_empty(),
                     has_ai_summary: dependency.ai_summary.is_some(),
-                    ai_summary: dependency.ai_summary.clone().unwrap_or_default(),
+                    insight: insight.clone(),
+                    has_command: !command.is_empty(),
+                    command,
+                    drawer_id: format!("drawer-{project_index}-{dep_index}"),
+                    has_bump_badge: is_breaking && latest.is_some(),
+                    bump_label: match &latest {
+                        Some(target) => {
+                            format!("Major Bump: {} → {}", dependency.current_version, target)
+                        }
+                        None => String::new(),
+                    },
+                    drawer_title: drawer_title(dependency.update_type),
+                    drawer_desc: insight,
                 });
             }
 
@@ -190,8 +203,8 @@ impl ReportData {
             projects.push(ProjectReport {
                 name: project_name(manifest_path),
                 manifest_path: manifest_path.clone(),
-                ecosystems: badges,
-                total: tally.total(),
+                ecosystem_label: ecosystem_label(dependencies[0].ecosystem),
+                run_in: run_in(manifest_path),
                 breaking: tally.breaking,
                 at_risk: tally.at_risk,
                 safe: tally.safe,
@@ -205,23 +218,18 @@ impl ReportData {
             version: env!("CARGO_PKG_VERSION").to_string(),
             project_count: projects.len(),
             dependency_count: dependencies.len(),
-            breaking: overall.breaking,
-            at_risk: overall.at_risk,
-            safe: overall.safe,
-            up_to_date: overall.up_to_date,
-            unknown: overall.unknown,
-            scanned_root: meta.scanned_root.clone().unwrap_or_default(),
             duration_display: match meta.scan_duration_ms {
                 Some(ms) => format!("{ms} ms"),
                 None => "—".to_string(),
             },
+            breaking: overall.breaking,
+            at_risk: overall.at_risk,
+            safe: overall.safe,
             has_dependencies: !dependencies.is_empty(),
             projects,
         }
     }
-}
 
-impl ReportData {
     /// Render the report to a self-contained HTML document.
     pub fn render_html(&self) -> Result<String, askama::Error> {
         self.render()
@@ -238,26 +246,35 @@ fn project_name(manifest_path: &str) -> String {
         .unwrap_or_else(|| ".".to_string())
 }
 
-/// Ecosystem badge label.
-fn ecosystem_badge(ecosystem: Ecosystem) -> &'static str {
+/// Directory the update command should be run in.
+fn run_in(manifest_path: &str) -> String {
+    Path::new(manifest_path)
+        .parent()
+        .filter(|parent| !parent.as_os_str().is_empty())
+        .map(|parent| parent.display().to_string())
+        .unwrap_or_else(|| ".".to_string())
+}
+
+/// Ecosystem pill label for the project header.
+fn ecosystem_label(ecosystem: Ecosystem) -> &'static str {
     match ecosystem {
-        Ecosystem::Cargo => "CARGO",
-        Ecosystem::Npm => "NPM",
+        Ecosystem::Cargo => "Cargo",
+        Ecosystem::Npm => "npm",
     }
 }
 
-/// CSS/filter tag for an update type.
-fn risk_class(update_type: UpdateType) -> &'static str {
+/// Filter tag used by the report's JavaScript (`data-status`).
+fn stitch_status(update_type: UpdateType) -> &'static str {
     match update_type {
         UpdateType::Breaking => "breaking",
-        UpdateType::AtRisk => "at-risk",
+        UpdateType::AtRisk => "risk",
         UpdateType::Safe => "safe",
         UpdateType::UpToDate => "up-to-date",
         UpdateType::Unknown => "unknown",
     }
 }
 
-/// Human label for an update type.
+/// Human label for the risk column.
 fn risk_label(update_type: UpdateType) -> &'static str {
     match update_type {
         UpdateType::Breaking => "major",
@@ -268,12 +285,44 @@ fn risk_label(update_type: UpdateType) -> &'static str {
     }
 }
 
+/// CSS class for the solid risk dot.
+fn dot_class(update_type: UpdateType) -> &'static str {
+    match update_type {
+        UpdateType::Breaking => "dot-breaking",
+        UpdateType::AtRisk => "dot-risk",
+        UpdateType::Safe => "dot-safe",
+        UpdateType::UpToDate | UpdateType::Unknown => "",
+    }
+}
+
 /// Whether the update type carries a solid risk dot.
 fn has_risk_dot(update_type: UpdateType) -> bool {
     matches!(
         update_type,
         UpdateType::Breaking | UpdateType::AtRisk | UpdateType::Safe
     )
+}
+
+/// Drawer summary title for an update type.
+fn drawer_title(update_type: UpdateType) -> &'static str {
+    match update_type {
+        UpdateType::Breaking => "Major version bump — review before upgrading",
+        UpdateType::AtRisk => "At-risk update — outside the declared range",
+        UpdateType::Safe => "Safe update — inside the declared range",
+        UpdateType::UpToDate => "Already up to date",
+        UpdateType::Unknown => "No update data available",
+    }
+}
+
+/// Fallback row insight when there is no AI summary.
+fn default_insight(update_type: UpdateType) -> &'static str {
+    match update_type {
+        UpdateType::Breaking => "Major version bump — potential breaking API changes.",
+        UpdateType::AtRisk => "Upgrade outside the declared range — verify compatibility.",
+        UpdateType::Safe => "Patch or minor update inside the declared requirement.",
+        UpdateType::UpToDate => "Declared version already matches the latest release.",
+        UpdateType::Unknown => "Registry data unavailable; versions could not be compared.",
+    }
 }
 
 /// The update command for a dependency, when there is something to update.
