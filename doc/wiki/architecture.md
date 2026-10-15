@@ -139,10 +139,11 @@ release. `classify` builds the `ClassifiedDependency` result set. See
 
 Implemented in Phase 4. `ReportData::from_classified` groups the classified set
 by project/manifest (project name from the manifest's directory) and
-`render_html` renders the Askama template (`templates/report.html`) into a
-single self-contained HTML file: all CSS and vanilla JavaScript are inline, so
-it opens offline with no network access. Rows carry a copyable per-ecosystem
-update command and each project exposes an "Update All" command. See
+`render_html` renders the Askama template (`templates/report.html` — the Google
+Stitch UI v4 export with its mock rows replaced by loops) into a single
+self-contained HTML file: all CSS and vanilla JavaScript are inline, so it opens
+offline with no network access. Rows carry a copyable per-ecosystem update
+command and each project exposes an "Update All" command. See
 [[phase-4-html-report]]; the template design (palette, project-centric component
 hierarchy, risk indicators, inline drawer, filter/search, empty state) is fixed
 by [[html-report-spec]].

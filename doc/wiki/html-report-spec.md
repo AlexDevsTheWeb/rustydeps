@@ -159,3 +159,5 @@ the combined update commands for that manifest (e.g.
 - [[index]] — knowledge-graph entrypoint.
 - `doc/raw/2026-10-15/opencode-prompt-wiki-html-spec.md` — the raw prompt that
   led to this spec.
+- `doc/raw/2026-10-15/opencode-prompt-stitch-integration.md` — the brief for
+  adopting the Stitch UI v4 HTML export as the implementation template.

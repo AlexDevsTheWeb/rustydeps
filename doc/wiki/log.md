@@ -179,4 +179,29 @@ the Phase 4 implementation report's MR section.
 
 Validation: OKF validator PASSED (0 errors, 0 warnings).
 
+## 2026-10-15 — Stitch UI v4 template integrated into the report engine
+
+Adopted the Google Stitch HTML export
+(`doc/raw/2026-10-15/opencode-prompt-stitch-integration.md`) as the report
+template:
+
+- `src/templates/report_stitch.html` — the raw design export, tracked as a
+  reference input (`.gitignore` allow-lists `src/templates/**/*.html`).
+- `templates/report.html` — the export's CSS/JS kept verbatim, the mock body
+  replaced by Askama loops over the data, the Google Fonts links removed for
+  self-containment, plus a supplemental stylesheet (empty state, batch modal,
+  `semver-badge`, `migration-step`, `terminal-prompt-prefix`) and the missing
+  JS handlers (`openBatchModal`, `closeBatchModal`, `copyBatchModalCommand`,
+  `handleBackdropClick`, `resetAllFilters`, and the empty-state toggle).
+- `src/report/mod.rs`, `src/report/tests.rs`, `src/main.rs` — model reshaped to
+  the design's fields; `ReportMeta::scanned_root` dropped.
+- Updated [[phase-4-html-report]] (template + Stitch integration sections),
+  its implementation report (follow-up section), [[architecture]] (report
+  generator), and [[html-report-spec]] (related brief).
+
+Validation: `cargo fmt --all --check` clean; `cargo clippy --all-targets -- -D
+warnings` clean; `cargo test` 57 passed; a live scan produced a ~55 KB
+self-contained report with all drawer ids resolving and every JS handler
+defined; OKF validator PASSED (0 errors, 0 warnings).
+
 
