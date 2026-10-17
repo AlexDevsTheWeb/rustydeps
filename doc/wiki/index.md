@@ -61,6 +61,8 @@ and produces an interactive HTML report with optional AI changelog summaries.
   and GHCR publishing brief (issue #15) implemented by [[docker-image]].
 - `doc/raw/2026-10-15/2026-10-15-issue15-docker.md` — development report for the
   Docker work.
+- `doc/raw/2026-10-15/opencode-prompt-08-issue15-docker.md` — the issue #15
+  Docker image brief implemented by [[docker-image]].
 - `doc/raw/2026-10-17/2026-10-17-issue19.md` — the issue #19 CLI scanning UX
   brief implemented by [[cli-scanning-ux]].
 

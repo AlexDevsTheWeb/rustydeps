@@ -439,5 +439,20 @@ link in the CLI-scanning-UX implementation report's MR section.
 
 Validation: OKF validator PASSED (0 errors, 0 warnings).
 
+## 2026-10-17 — Repository hygiene and the issue #15 source brief
+
+Two small follow-ups folded into PR #20:
+
+- `.gitignore` — ignore the generated `/rustydeps-report.html` at the repository
+  root, so a default `rustydeps scan .` no longer leaves an untracked report
+  next to the manifest files.
+- Committed the previously untracked issue #15 brief
+  (`doc/raw/2026-10-15/opencode-prompt-08-issue15-docker.md`) and added it to
+  the [[index]] source-document list as the prompt [[docker-image]] implements.
+
+Validation: `git check-ignore -v rustydeps-report.html` matches the new rule;
+OKF validator PASSED (0 errors, 0 warnings).
+
+
 
 
