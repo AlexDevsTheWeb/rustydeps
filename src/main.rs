@@ -10,6 +10,7 @@ mod classifier;
 mod cli;
 mod model;
 mod parser;
+mod progress;
 mod registry;
 mod report;
 mod scanner;
@@ -102,20 +103,28 @@ fn print_banner() {
 /// Run the `scan` subcommand: discover manifests, parse them, resolve latest
 /// registry versions (unless offline), and classify each dependency.
 async fn run_scan(args: ScanArgs) -> Result<()> {
-    if args.format != OutputFormat::Json {
+    // `--format json` must keep stdout a single JSON document: no banner, no
+    // progress animations, no per-repository status lines.
+    let machine_readable = args.format == OutputFormat::Json;
+    if !machine_readable {
         print_banner();
     }
 
     let started = Instant::now();
+    let progress = progress::ScanProgress::new(!machine_readable);
 
+    let discovery = progress.spinner("Discovering dependency manifests…");
     let manifests = scanner::scan_directory(&args.path)?;
+    discovery.finish_and_clear();
     info!(
         root = %args.path.display(),
         count = manifests.len(),
         "manifest scan complete"
     );
 
+    let parsing = progress.spinner("Parsing manifests…");
     let outcome = parse_manifests(&manifests, &parser::default_parsers());
+    parsing.finish_and_clear();
     for (path, error) in &outcome.failures {
         warn!(
             path = %path.display(),
@@ -127,11 +136,18 @@ async fn run_scan(args: ScanArgs) -> Result<()> {
     let dependencies = outcome.dependencies;
     info!(count = dependencies.len(), "parsed dependencies");
 
+    if !machine_readable {
+        report_repositories(&manifests, &dependencies, &args.path, progress);
+    }
+
     let lookups = if args.offline {
         info!("offline mode: skipping registry lookups; updates classify as unknown");
         VersionLookups::new()
     } else {
-        resolve_lookups(&dependencies).await
+        let resolving = progress.spinner("Resolving latest versions from registries…");
+        let lookups = resolve_lookups(&dependencies).await;
+        resolving.finish_and_clear();
+        lookups
     };
 
     let summarizer = Summarizer::new(args.ai);
@@ -184,6 +200,48 @@ async fn run_scan(args: ScanArgs) -> Result<()> {
     );
 
     Ok(())
+}
+
+/// Print one status line per discovered repository while advancing a progress
+/// bar, so a large scan visibly makes progress instead of appearing frozen.
+///
+/// The bar's total is the manifest count, which is known only once discovery
+/// finishes — hence the spinner during discovery and the counter here.
+fn report_repositories(
+    manifests: &[scanner::DiscoveredManifest],
+    dependencies: &[ParsedDependency],
+    root: &Path,
+    progress: progress::ScanProgress,
+) {
+    if manifests.is_empty() {
+        println!(
+            "No supported dependency manifest found under {}.",
+            root.display()
+        );
+        return;
+    }
+
+    let bar = progress.bar(manifests.len() as u64, "Scanning repositories");
+
+    let mut counts: HashMap<&Path, usize> = HashMap::new();
+    for dependency in dependencies {
+        *counts
+            .entry(dependency.manifest_path.as_path())
+            .or_default() += 1;
+    }
+
+    for manifest in manifests {
+        let count = counts.get(manifest.path.as_path()).copied().unwrap_or(0);
+        let label = progress::project_label(root, &manifest.path);
+        println!(
+            "{} {}",
+            "✔".green(),
+            progress::repository_summary(&label, count, manifest.manifest_type.ecosystem_label())
+        );
+        bar.inc(1);
+    }
+
+    bar.finish_and_clear();
 }
 
 /// Write the rendered report, creating parent directories when needed.

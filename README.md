@@ -1,5 +1,5 @@
 ```
- █▀█ █  █ █▀▀ ▀█▀ █  █ █▀▄ █▀▀ █▀█ █▀    v0.1.0
+ █▀█ █  █ █▀▀ ▀█▀ █  █ █▀▄ █▀▀ █▀█ █▀    v0.2.0
  █▀▄ █▄▄█ ▄██  █  ▀▄▄█ █▄▀ ██▄ █▀▀ ▄█
 ```
 
@@ -7,7 +7,7 @@
 
 [![Release](https://github.com/AlexDevsTheWeb/rustydeps/actions/workflows/release.yml/badge.svg)](https://github.com/AlexDevsTheWeb/rustydeps/actions/workflows/release.yml)
 [![Docker](https://github.com/AlexDevsTheWeb/rustydeps/actions/workflows/docker.yml/badge.svg)](https://github.com/AlexDevsTheWeb/rustydeps/actions/workflows/docker.yml)
-![Version](https://img.shields.io/badge/version-0.1.0-ea580c)
+![Version](https://img.shields.io/badge/version-0.2.0-ea580c)
 ![License](https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-blue)
 ![Rust](https://img.shields.io/badge/rust-1.88%2B-ea580c)
 
@@ -79,25 +79,25 @@ Rust toolchain nor a compile step:
 docker run --rm -v "$PWD:/workspace" ghcr.io/alexdevstheweb/rustydeps:latest
 
 # The report is written into the mounted directory
-docker run --rm -v "$PWD:/workspace" ghcr.io/alexdevstheweb/rustydeps:0.1.0 \
+docker run --rm -v "$PWD:/workspace" ghcr.io/alexdevstheweb/rustydeps:0.2.0 \
   scan /workspace --no-open -o /workspace/rustydeps-report.html
 
 # Pin a version and skip registry lookups entirely
-docker run --rm -v "$PWD:/workspace" ghcr.io/alexdevstheweb/rustydeps:0.1.0 \
+docker run --rm -v "$PWD:/workspace" ghcr.io/alexdevstheweb/rustydeps:0.2.0 \
   scan /workspace --offline --no-open
 ```
 
 `/workspace` is the image's working directory, so `docker run --rm -v
 "$PWD:/workspace" ghcr.io/alexdevstheweb/rustydeps` on its own is equivalent to
 `rustydeps scan .` with the report landing beside your manifests. Image tags
-mirror the release tags (`0.1.0`, `0.1`) plus `latest` for the default branch.
+mirror the release tags (`0.2.0`, `0.1`) plus `latest` for the default branch.
 
 ### CI usage
 
 ```yaml
 # GitLab CI — the Alpine-based image ships `sh`, which job images require
 rustydeps:
-  image: ghcr.io/alexdevstheweb/rustydeps:0.1.0
+  image: ghcr.io/alexdevstheweb/rustydeps:0.2.0
   script:
     - rustydeps scan . --no-open -o rustydeps-report.html
   artifacts:
@@ -106,7 +106,7 @@ rustydeps:
 
 ```yaml
 # GitHub Actions
-- uses: docker://ghcr.io/alexdevstheweb/rustydeps:0.1.0
+- uses: docker://ghcr.io/alexdevstheweb/rustydeps:0.2.0
   with:
     args: scan . --no-open
 ```
@@ -162,7 +162,7 @@ Options:
 
 ## Releasing
 
-Pushing a tag matching `v*` (for example `v0.1.0`) triggers the
+Pushing a tag matching `v*` (for example `v0.2.0`) triggers the
 [release workflow](.github/workflows/release.yml), which builds binaries for Linux
 (`x86_64-unknown-linux-gnu`) and macOS (`x86_64-apple-darwin`, `aarch64-apple-darwin`),
 then attaches them (with checksums and a changelog summary) to the GitHub Release.
@@ -171,8 +171,8 @@ which publishes the multi-arch image to `ghcr.io/alexdevstheweb/rustydeps`
 tagged with the release version (see [Docker](#docker)).
 
 ```bash
-git tag v0.1.0
-git push origin v0.1.0
+git tag v0.2.0
+git push origin v0.2.0
 ```
 
 ## Development
