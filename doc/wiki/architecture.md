@@ -54,9 +54,13 @@ Scan progress is reported by `src/progress.rs` (`ScanProgress`, a wrapper over
 `indicatif`): a spinner covers manifest discovery and registry resolution, and a
 `pos/len` counter covers per-repository reporting, where `report_repositories`
 prints one `✔ Scanned '<relative path>': N dependencies (<ecosystem>)` line per
-manifest. Bars draw to stderr and are hidden whenever stderr is not an
-interactive terminal; `--format json` additionally suppresses the banner and the
-status lines so stdout stays a single JSON document. See [[cli-scanning-ux]].
+manifest. All bars share one `indicatif::MultiProgress`; status lines and tracing
+records are written with the bars *suspended* (`ScanProgress::println` and the
+`ProgressWriter` `MakeWriter`) so they never leave orphan bar frames. Bars draw
+to stderr and are hidden whenever stderr is not an interactive terminal;
+`--format json` additionally suppresses the banner and the status lines so
+stdout stays a single JSON document. See [[cli-scanning-ux]] and
+[[report-ux-refinements]].
 
 ### Filesystem walk (`src/scanner.rs`)
 
@@ -160,15 +164,21 @@ release. `classify` builds the `ClassifiedDependency` result set. See
 ### Report generator (`src/report/`)
 
 Implemented in Phase 4. `ReportData::from_classified` groups the classified set
-by project/manifest (project name from the manifest's directory) and
-`render_html` renders the Askama template (`templates/report.html` — the Google
-Stitch UI v4 export with its mock rows replaced by loops) into a single
-self-contained HTML file: all CSS and vanilla JavaScript are inline, so it opens
-offline with no network access. Rows carry a copyable per-ecosystem update
-command and each project exposes an "Update All" command. See
-[[phase-4-html-report]]; the template design (palette, project-centric component
-hierarchy, risk indicators, inline drawer, filter/search, empty state) is fixed
-by [[html-report-spec]].
+by project/manifest (project name from the manifest's directory), sorts each
+group's rows by risk severity then name, and `render_html` renders the Askama
+template (`templates/report.html` — the Google Stitch UI v4 export with its mock
+rows replaced by loops) into a single self-contained HTML file: all CSS and
+vanilla JavaScript are inline, so it opens offline with no network access. Rows
+carry a copyable per-ecosystem update command and each project exposes an
+"Update All" command in its expanded body. Cards render collapsed by default.
+See [[phase-4-html-report]]; the template design (palette, project-centric
+component hierarchy, risk indicators, inline drawer, filter/search, empty state)
+is fixed by [[html-report-spec]]. The card disclosure and row ordering are
+refined by [[report-ux-refinements]].
+
+The report carries branding and a readable type scale: an inline SVG logo in the
+header and an embedded data-URI SVG favicon (both self-contained — no external
+image request), on a 12/13/14/16px scale. See [[ui-font-branding]].
 
 ### AI module (`src/ai/`)
 

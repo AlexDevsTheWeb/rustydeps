@@ -92,5 +92,7 @@ discovery is a spinner and the counter is a separate phase.
 - [[index]] — knowledge-graph entrypoint.
 - [[architecture]] — the CLI pipeline this change instruments.
 - [[release-automation]] — the tag-triggered release that will publish v0.2.0.
+- [[report-ux-refinements]] — the follow-up that removes orphan progress-bar
+  frames.
 - [implementation report](implementation-report.md) — file-by-file detail and
   verification.

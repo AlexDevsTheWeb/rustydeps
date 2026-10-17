@@ -152,6 +152,15 @@ impl ReportData {
         let mut projects = Vec::with_capacity(groups.len());
 
         for (project_index, (manifest_path, dependencies)) in groups.iter().enumerate() {
+            // Sort rows by risk severity (most severe first), then by name, so a
+            // project card leads with what needs attention.
+            let mut dependencies = dependencies.clone();
+            dependencies.sort_by(|a, b| {
+                severity_rank(a.update_type)
+                    .cmp(&severity_rank(b.update_type))
+                    .then_with(|| a.name.cmp(&b.name))
+            });
+
             let mut tally = Tally::default();
             let mut commands: Vec<String> = Vec::new();
             let mut rows = Vec::with_capacity(dependencies.len());
@@ -233,6 +242,17 @@ impl ReportData {
     /// Render the report to a self-contained HTML document.
     pub fn render_html(&self) -> Result<String, askama::Error> {
         self.render()
+    }
+}
+
+/// Risk ordering for dependency rows: most severe first, unknown last.
+fn severity_rank(update_type: UpdateType) -> u8 {
+    match update_type {
+        UpdateType::Breaking => 0,
+        UpdateType::AtRisk => 1,
+        UpdateType::Safe => 2,
+        UpdateType::UpToDate => 3,
+        UpdateType::Unknown => 4,
     }
 }
 
