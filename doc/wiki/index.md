@@ -41,6 +41,7 @@ and produces an interactive HTML report with optional AI changelog summaries.
 | [[release-automation]] | Tag-triggered GitHub Actions release pipeline (Linux/macOS binaries) and the full README; [implementation report](features/release-automation/implementation-report.md). |
 | [[docker-image]] | Multi-stage Alpine `Dockerfile`, `.dockerignore`, and the GHCR multi-arch build/publish workflow for CI usage; [implementation report](features/docker-image/implementation-report.md). |
 | [[cli-scanning-ux]] | Interactive scan progress (spinners, a per-repository `pos/len` counter, per-manifest metrics), the non-TTY/JSON fallback, and the v0.2.0 version bump; [implementation report](features/cli-scanning-ux/implementation-report.md). |
+| [[ui-font-branding]] | HTML report type-scale bump (12/13/14/16px) plus an inline SVG brand logo and an embedded data-URI SVG favicon, keeping the report self-contained; [implementation report](features/ui-font-branding/implementation-report.md). |
 
 ## Source documents
 
@@ -65,6 +66,8 @@ and produces an interactive HTML report with optional AI changelog summaries.
   Docker image brief implemented by [[docker-image]].
 - `doc/raw/2026-10-17/2026-10-17-issue19.md` — the issue #19 CLI scanning UX
   brief implemented by [[cli-scanning-ux]].
+- `doc/raw/2026-10-17/2026-10-17-issue21.md` — the issue #21 report font
+  scaling and branding brief implemented by [[ui-font-branding]].
 
 ## Conventions
 

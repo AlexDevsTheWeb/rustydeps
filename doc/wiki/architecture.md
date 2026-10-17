@@ -170,6 +170,10 @@ command and each project exposes an "Update All" command. See
 hierarchy, risk indicators, inline drawer, filter/search, empty state) is fixed
 by [[html-report-spec]].
 
+The report carries branding and a readable type scale: an inline SVG logo in the
+header and an embedded data-URI SVG favicon (both self-contained — no external
+image request), on a 12/13/14/16px scale. See [[ui-font-branding]].
+
 ### AI module (`src/ai/`)
 
 Optional and flag-gated. Phase 3 scaffolds it: `Summarizer` detects a provider

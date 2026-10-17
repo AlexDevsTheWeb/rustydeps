@@ -453,6 +453,43 @@ Two small follow-ups folded into PR #20:
 Validation: `git check-ignore -v rustydeps-report.html` matches the new rule;
 OKF validator PASSED (0 errors, 0 warnings).
 
+## 2026-10-17 — UI font scaling & branding (issue #21)
+
+Applied `doc/raw/2026-10-17/2026-10-17-issue21.md` (issue #21, "UI Font Scaling
+& Branding (Favicon + Logo)"):
+
+- Added the feature subfolder `features/ui-font-branding/` with
+  [[ui-font-branding]] (feature page) and its implementation report.
+- `templates/report.html` — all 47 `font-size` declarations lifted to a
+  12/13/14/16px scale (10→12, 11/11.5→13, 12/12.5/13→14, 14→16); an embedded
+  data-URI SVG favicon in `<head>` and an inline SVG `.logo-icon` in the header
+  replacing the plain `.rust-dot`.
+- `src/report/tests.rs` — the self-containment assertion now allows the single
+  `data:` favicon `<link>` (the old test banned every `<link>`); added
+  `renders_brand_logo_and_favicon`.
+- Updated [[architecture]] (report generator branding paragraph), [[index]]
+  (feature row and source document), and this log.
+
+The brief targets a Tailwind build (`text-xs`/`text-sm`) and a `<h1>` header
+that this Stitch-export template does not have; the intent was translated to the
+file's own px scale and header structure, keeping the report self-contained
+(the favicon namespace is percent-encoded and the logo omits `xmlns`, so no
+literal URL scheme remains). The brief's `doc/raw/` wiki path is again mapped to
+`doc/wiki/` per repository rule.
+
+Validation: `cargo fmt --all --check` clean; `cargo clippy --all-targets -- -D
+warnings` clean; `cargo test` 90 passed (89 + 1 branding); a generated report is
+self-contained (0 URL-scheme refs, exactly 1 `<link>`, 1 logo, no font below
+12px); OKF validator PASSED (0 errors, 0 warnings).
+
+## 2026-10-17 — UI font & branding draft PR opened
+
+Opened draft PR #22 (`feat/ui-branding-fonts` → `development`) and recorded the
+link in the UI-font-branding implementation report's MR section.
+
+Validation: OKF validator PASSED (0 errors, 0 warnings).
+
+
 
 
 
