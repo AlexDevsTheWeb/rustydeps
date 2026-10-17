@@ -6,7 +6,7 @@ status: active
 version: 0.1.0
 license: CC-BY-4.0
 created: 2026-10-14
-updated: 2026-10-15
+updated: 2026-10-17
 tags: [log, history]
 ---
 
@@ -396,5 +396,130 @@ HTML). Unverified: the `linux/arm64` leg and a real GHCR push, which only run on
 Validation: workflow YAML parses and all `run:` blocks pass `bash -n`;
 `cargo fmt`/`clippy`/`test` (85) unaffected; OKF validator PASSED (0 errors,
 0 warnings).
+
+## 2026-10-17 — CLI scanning UX & v0.2.0 (issue #19)
+
+Applied `doc/raw/2026-10-17/2026-10-17-issue19.md` (issue #19, "Improvement:
+review CLI interface when scanning"), preparing release v0.2.0:
+
+- Added the feature subfolder `features/cli-scanning-ux/` with
+  [[cli-scanning-ux]] (feature page) and its implementation report.
+- `src/progress.rs` (new) — `ScanProgress`, a thin wrapper over `indicatif`:
+  spinners for discovery and registry resolution, a `pos/len` counter for
+  per-repository reporting, hidden when stderr is not a TTY. Pure
+  `project_label` and `repository_summary` helpers.
+- `src/main.rs` — spinners around discovery and resolution; a new
+  `report_repositories` prints `✔ Scanned '<relative path>': N dependencies
+  (<ecosystem>)` per manifest and advances the `Scanning repositories [bar]
+  X/N` counter. `--format json` suppresses the banner and all status lines so
+  stdout stays one JSON document (bars already draw to stderr).
+- `src/scanner.rs` — `ManifestType::ecosystem_label()` for the report-matching
+  pill labels.
+- `Cargo.toml`/`Cargo.lock` — `version = "0.2.0"` and `indicatif = "0.18"`.
+  `README.md` — banner, badge and Docker/CI examples bumped to `0.2.0`.
+- Updated [[architecture]] (CLI progress paragraph), [[index]] (feature row and
+  source document), and this log.
+
+The brief's step 5 names a wiki path under `doc/raw/`; `doc/raw/` is immutable
+input in this repository, so the documentation lives under
+`doc/wiki/features/cli-scanning-ux/` (deviation recorded on the feature page and
+the implementation report).
+
+Validation: `cargo fmt --all --check` clean; `cargo clippy --all-targets -- -D
+warnings` clean; `cargo test` 89 passed (85 + 3 progress + 1 scanner);
+`cargo build --release` succeeds and `--version` reports `rustydeps 0.2.0`;
+non-TTY and `--format json` runs emit no animation and a clean JSON stream; a
+pty run shows the spinners and the `0/2 → 2/2` counter; OKF validator PASSED
+(0 errors, 0 warnings).
+
+## 2026-10-17 — CLI scanning UX draft PR opened
+
+Opened draft PR #20 (`feat/cli-scanning-ux` → `development`) and recorded the
+link in the CLI-scanning-UX implementation report's MR section.
+
+Validation: OKF validator PASSED (0 errors, 0 warnings).
+
+## 2026-10-17 — Repository hygiene and the issue #15 source brief
+
+Two small follow-ups folded into PR #20:
+
+- `.gitignore` — ignore the generated `/rustydeps-report.html` at the repository
+  root, so a default `rustydeps scan .` no longer leaves an untracked report
+  next to the manifest files.
+- Committed the previously untracked issue #15 brief
+  (`doc/raw/2026-10-15/opencode-prompt-08-issue15-docker.md`) and added it to
+  the [[index]] source-document list as the prompt [[docker-image]] implements.
+
+Validation: `git check-ignore -v rustydeps-report.html` matches the new rule;
+OKF validator PASSED (0 errors, 0 warnings).
+
+## 2026-10-17 — UI font scaling & branding (issue #21)
+
+Applied `doc/raw/2026-10-17/2026-10-17-issue21.md` (issue #21, "UI Font Scaling
+& Branding (Favicon + Logo)"):
+
+- Added the feature subfolder `features/ui-font-branding/` with
+  [[ui-font-branding]] (feature page) and its implementation report.
+- `templates/report.html` — all 47 `font-size` declarations lifted to a
+  12/13/14/16px scale (10→12, 11/11.5→13, 12/12.5/13→14, 14→16); an embedded
+  data-URI SVG favicon in `<head>` and an inline SVG `.logo-icon` in the header
+  replacing the plain `.rust-dot`.
+- `src/report/tests.rs` — the self-containment assertion now allows the single
+  `data:` favicon `<link>` (the old test banned every `<link>`); added
+  `renders_brand_logo_and_favicon`.
+- Updated [[architecture]] (report generator branding paragraph), [[index]]
+  (feature row and source document), and this log.
+
+The brief targets a Tailwind build (`text-xs`/`text-sm`) and a `<h1>` header
+that this Stitch-export template does not have; the intent was translated to the
+file's own px scale and header structure, keeping the report self-contained
+(the favicon namespace is percent-encoded and the logo omits `xmlns`, so no
+literal URL scheme remains). The brief's `doc/raw/` wiki path is again mapped to
+`doc/wiki/` per repository rule.
+
+Validation: `cargo fmt --all --check` clean; `cargo clippy --all-targets -- -D
+warnings` clean; `cargo test` 90 passed (89 + 1 branding); a generated report is
+self-contained (0 URL-scheme refs, exactly 1 `<link>`, 1 logo, no font below
+12px); OKF validator PASSED (0 errors, 0 warnings).
+
+## 2026-10-17 — UI font & branding draft PR opened
+
+Opened draft PR #22 (`feat/ui-branding-fonts` → `development`) and recorded the
+link in the UI-font-branding implementation report's MR section.
+
+Validation: OKF validator PASSED (0 errors, 0 warnings).
+
+## 2026-10-17 — CLI progress & report refinements (issue #21 follow-up)
+
+Applied `doc/raw/2026-10-17/2026-10-17-issue21-fix.md` on the existing
+`feat/ui-branding-fonts` branch (folded into PR #22):
+
+- Added the feature subfolder `features/report-ux-refinements/` with
+  [[report-ux-refinements]] (feature page) and its implementation report.
+- `src/progress.rs` — all bars share one `indicatif::MultiProgress`;
+  `ScanProgress::println` writes with the bars suspended, and `ProgressWriter`
+  (a `tracing_subscriber::fmt::MakeWriter`) flushes log records under the same
+  suspend, so no orphan `Scanning repositories` frames remain.
+- `src/main.rs` — the reporter is built before `init_tracing` and threaded into
+  `run_scan`; `report_repositories` prints through `ScanProgress::println`.
+- `templates/report.html` — cards render collapsed by default; the collapsed
+  header keeps chevron/pill/name/counts only; the manifest path and `Update All`
+  move to a new `.project-deps-header` in the expanded body; the chevron is
+  enlarged; `updateCollapseBtnText()` runs on load.
+- `src/report/mod.rs` — rows sorted by risk severity then name;
+  `src/report/tests.rs` — updated the combined-command expectation and added
+  sort/collapsed/clean-header tests.
+- Updated [[architecture]] (progress and report-generator paragraphs),
+  [[index]] (feature row and source document), [[cli-scanning-ux]] /
+  [[ui-font-branding]] (follow-up links), and this log.
+
+Validation: `cargo fmt --all --check` clean; `cargo clippy --all-targets -- -D
+warnings` clean; `cargo test` 94 passed (90 + 4); a pty run reaches `3/3` with no
+leftover bar frame; non-TTY stdout has 0 escape sequences and JSON stays pure;
+OKF validator PASSED (0 errors, 0 warnings).
+
+
+
+
 
 

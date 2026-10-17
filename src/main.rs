@@ -10,6 +10,7 @@ mod classifier;
 mod cli;
 mod model;
 mod parser;
+mod progress;
 mod registry;
 mod report;
 mod scanner;
@@ -42,10 +43,21 @@ type VersionLookups = HashMap<(Ecosystem, String), (Option<String>, Option<Strin
 #[tokio::main]
 async fn main() -> Result<()> {
     let cli = Cli::parse();
-    init_tracing(verbose_requested(&cli));
+
+    // `--format json` must keep stdout a single JSON document: no banner, no
+    // progress animations, no per-repository status lines.
+    let machine_readable = matches!(
+        &cli.command,
+        Command::Scan(args) if args.format == OutputFormat::Json
+    );
+    let progress = progress::ScanProgress::new(!machine_readable);
+    init_tracing(
+        verbose_requested(&cli),
+        progress::ProgressWriter::new(progress.multi().clone()),
+    );
 
     match cli.command {
-        Command::Scan(args) => run_scan(args).await,
+        Command::Scan(args) => run_scan(args, progress).await,
     }
 }
 
@@ -53,15 +65,17 @@ async fn main() -> Result<()> {
 ///
 /// `RUST_LOG` wins when set; otherwise the default level is `debug` when
 /// `--verbose` is passed and `info` otherwise. Logs go to stderr so that
-/// machine-readable output on stdout (for example `--format json`) stays clean.
-fn init_tracing(verbose: bool) {
+/// machine-readable output on stdout (for example `--format json`) stays clean,
+/// and they are written through `writer`, which clears any active progress bar
+/// before each line and redraws it afterwards.
+fn init_tracing(verbose: bool, writer: progress::ProgressWriter) {
     let default_level = if verbose { "debug" } else { "info" };
     let filter = tracing_subscriber::EnvFilter::try_from_default_env()
         .unwrap_or_else(|_| tracing_subscriber::EnvFilter::new(default_level));
 
     tracing_subscriber::fmt()
         .with_env_filter(filter)
-        .with_writer(std::io::stderr)
+        .with_writer(writer)
         .init();
 }
 
@@ -101,21 +115,26 @@ fn print_banner() {
 
 /// Run the `scan` subcommand: discover manifests, parse them, resolve latest
 /// registry versions (unless offline), and classify each dependency.
-async fn run_scan(args: ScanArgs) -> Result<()> {
-    if args.format != OutputFormat::Json {
+async fn run_scan(args: ScanArgs, progress: progress::ScanProgress) -> Result<()> {
+    let machine_readable = args.format == OutputFormat::Json;
+    if !machine_readable {
         print_banner();
     }
 
     let started = Instant::now();
 
+    let discovery = progress.spinner("Discovering dependency manifests…");
     let manifests = scanner::scan_directory(&args.path)?;
+    discovery.finish_and_clear();
     info!(
         root = %args.path.display(),
         count = manifests.len(),
         "manifest scan complete"
     );
 
+    let parsing = progress.spinner("Parsing manifests…");
     let outcome = parse_manifests(&manifests, &parser::default_parsers());
+    parsing.finish_and_clear();
     for (path, error) in &outcome.failures {
         warn!(
             path = %path.display(),
@@ -127,11 +146,18 @@ async fn run_scan(args: ScanArgs) -> Result<()> {
     let dependencies = outcome.dependencies;
     info!(count = dependencies.len(), "parsed dependencies");
 
+    if !machine_readable {
+        report_repositories(&manifests, &dependencies, &args.path, &progress);
+    }
+
     let lookups = if args.offline {
         info!("offline mode: skipping registry lookups; updates classify as unknown");
         VersionLookups::new()
     } else {
-        resolve_lookups(&dependencies).await
+        let resolving = progress.spinner("Resolving latest versions from registries…");
+        let lookups = resolve_lookups(&dependencies).await;
+        resolving.finish_and_clear();
+        lookups
     };
 
     let summarizer = Summarizer::new(args.ai);
@@ -184,6 +210,50 @@ async fn run_scan(args: ScanArgs) -> Result<()> {
     );
 
     Ok(())
+}
+
+/// Print one status line per discovered repository while advancing a progress
+/// bar, so a large scan visibly makes progress instead of appearing frozen.
+///
+/// The bar's total is the manifest count, which is known only once discovery
+/// finishes — hence the spinner during discovery and the counter here. The
+/// status lines are printed through the reporter so they appear *above* the bar
+/// without leaving duplicated bar frames behind.
+fn report_repositories(
+    manifests: &[scanner::DiscoveredManifest],
+    dependencies: &[ParsedDependency],
+    root: &Path,
+    progress: &progress::ScanProgress,
+) {
+    if manifests.is_empty() {
+        progress.println(format!(
+            "No supported dependency manifest found under {}.",
+            root.display()
+        ));
+        return;
+    }
+
+    let bar = progress.bar(manifests.len() as u64, "Scanning repositories");
+
+    let mut counts: HashMap<&Path, usize> = HashMap::new();
+    for dependency in dependencies {
+        *counts
+            .entry(dependency.manifest_path.as_path())
+            .or_default() += 1;
+    }
+
+    for manifest in manifests {
+        let count = counts.get(manifest.path.as_path()).copied().unwrap_or(0);
+        let label = progress::project_label(root, &manifest.path);
+        progress.println(format!(
+            "{} {}",
+            "✔".green(),
+            progress::repository_summary(&label, count, manifest.manifest_type.ecosystem_label())
+        ));
+        bar.inc(1);
+    }
+
+    bar.finish_and_clear();
 }
 
 /// Write the rendered report, creating parent directories when needed.

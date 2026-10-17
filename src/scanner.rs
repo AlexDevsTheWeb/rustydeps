@@ -56,6 +56,18 @@ impl ManifestType {
             Self::ComposerJson => "composer.json",
         }
     }
+
+    /// Human-readable ecosystem label for console output, matching the report's
+    /// project-pill labels (e.g. `Cargo`, `npm`, `PyPI`).
+    pub fn ecosystem_label(self) -> &'static str {
+        match self {
+            Self::CargoToml => "Cargo",
+            Self::PackageJson => "npm",
+            Self::GoMod => "Go",
+            Self::RequirementsTxt | Self::PyprojectToml => "PyPI",
+            Self::ComposerJson => "Composer",
+        }
+    }
 }
 
 /// A manifest found on disk.
@@ -170,6 +182,16 @@ mod tests {
         }
 
         assert_eq!(ManifestType::from_file_name("README.md"), None);
+    }
+
+    #[test]
+    fn manifest_types_map_to_ecosystem_labels() {
+        assert_eq!(ManifestType::CargoToml.ecosystem_label(), "Cargo");
+        assert_eq!(ManifestType::PackageJson.ecosystem_label(), "npm");
+        assert_eq!(ManifestType::GoMod.ecosystem_label(), "Go");
+        assert_eq!(ManifestType::RequirementsTxt.ecosystem_label(), "PyPI");
+        assert_eq!(ManifestType::PyprojectToml.ecosystem_label(), "PyPI");
+        assert_eq!(ManifestType::ComposerJson.ecosystem_label(), "Composer");
     }
 
     #[test]

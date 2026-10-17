@@ -49,8 +49,31 @@ fn renders_a_self_contained_document() {
     // No external resources: the report must open offline.
     assert!(!html.contains("http://"), "found an http:// reference");
     assert!(!html.contains("https://"), "found an https:// reference");
-    assert!(!html.contains("<link "));
+    // The only <link> is the embedded data-URI favicon; no external stylesheets.
+    assert_eq!(html.matches("<link ").count(), 1, "unexpected <link> tags");
+    assert!(
+        html.contains("<link rel=\"icon\" type=\"image/svg+xml\" href=\"data:image/svg+xml,"),
+        "favicon must be an embedded SVG data URI"
+    );
     assert!(!html.contains("<script src"));
+}
+
+#[test]
+fn renders_brand_logo_and_favicon() {
+    let html = render(&[dependency(
+        Ecosystem::Cargo,
+        "backend-api/Cargo.toml",
+        "tokio",
+        "0.2",
+        Some("1.53.3"),
+        UpdateType::Breaking,
+    )]);
+
+    // Inline SVG brand mark precedes the wordmark; no external image request.
+    assert!(html.contains("class=\"logo-icon\""));
+    assert!(html.contains(">RustyDeps</span>"));
+    assert!(html.contains("<link rel=\"icon\""));
+    assert!(!html.contains("<img"), "branding must not use an <img> tag");
 }
 
 #[test]
@@ -207,10 +230,68 @@ fn combines_the_update_all_command() {
     let project = &data.projects[0];
 
     assert!(project.has_update_all);
+    // Rows are ordered most-severe-first, so the breaking `tokio` command comes
+    // before the safe `anyhow` one.
     assert_eq!(
         project.update_all_command,
-        "cargo update -p anyhow --precise 1.0.104 && cargo update -p tokio --precise 1.53.3"
+        "cargo update -p tokio --precise 1.53.3 && cargo update -p anyhow --precise 1.0.104"
     );
+}
+
+#[test]
+fn sorts_dependencies_by_severity_then_name() {
+    let dependencies = vec![
+        dependency(
+            Ecosystem::Cargo,
+            "backend-api/Cargo.toml",
+            "serde",
+            "1.0",
+            Some("1.0.219"),
+            UpdateType::Safe,
+        ),
+        dependency(
+            Ecosystem::Cargo,
+            "backend-api/Cargo.toml",
+            "tokio",
+            "0.2",
+            Some("1.53.3"),
+            UpdateType::Breaking,
+        ),
+        dependency(
+            Ecosystem::Cargo,
+            "backend-api/Cargo.toml",
+            "reqwest",
+            "0.11",
+            Some("0.13.5"),
+            UpdateType::AtRisk,
+        ),
+        dependency(
+            Ecosystem::Cargo,
+            "backend-api/Cargo.toml",
+            "left-pad",
+            "1.3.0",
+            Some("1.3.0"),
+            UpdateType::UpToDate,
+        ),
+        dependency(
+            Ecosystem::Cargo,
+            "backend-api/Cargo.toml",
+            "anyhow",
+            "1.0",
+            Some("2.0.0"),
+            UpdateType::Breaking,
+        ),
+    ];
+
+    let data = ReportData::from_classified(&dependencies, &ReportMeta::default());
+    let names: Vec<&str> = data.projects[0]
+        .dependencies
+        .iter()
+        .map(|dep| dep.name.as_str())
+        .collect();
+
+    // Breaking (alphabetical), then At-Risk, Safe, Up-To-Date.
+    assert_eq!(names, ["anyhow", "tokio", "reqwest", "serde", "left-pad"]);
 }
 
 #[test]
@@ -361,4 +442,58 @@ fn maps_ecosystem_labels_and_update_commands() {
         assert_eq!(project.ecosystem_label, label);
         assert_eq!(project.dependencies[0].command, expected);
     }
+}
+
+#[test]
+fn renders_project_cards_collapsed_by_default() {
+    let html = render(&[dependency(
+        Ecosystem::Cargo,
+        "backend-api/Cargo.toml",
+        "tokio",
+        "0.2",
+        Some("1.53.3"),
+        UpdateType::Breaking,
+    )]);
+
+    // The card opens compact; the global toggle is synced to "Expand All" by
+    // `updateCollapseBtnText()` on load.
+    assert!(html.contains("class=\"project-card collapsed\""));
+    assert!(html.contains("updateCollapseBtnText();"));
+}
+
+#[test]
+fn keeps_collapsed_header_clean_and_moves_path_and_action_into_the_body() {
+    let html = render(&[dependency(
+        Ecosystem::Cargo,
+        "backend-api/Cargo.toml",
+        "tokio",
+        "1.53.0",
+        Some("1.53.3"),
+        UpdateType::Safe,
+    )]);
+
+    // Slice the first card's collapsed header (from the header element up to the
+    // expanded body header) and check it stays compact.
+    let header_start = html
+        .find("class=\"project-header\"")
+        .expect("project header markup");
+    let body_header = html
+        .find("class=\"project-deps-header\"")
+        .expect("expanded body header");
+    assert!(body_header > header_start);
+    let collapsed_header = &html[header_start..body_header];
+
+    assert!(
+        !collapsed_header.contains("backend-api/Cargo.toml"),
+        "collapsed header must not show the filesystem path"
+    );
+    assert!(
+        !collapsed_header.contains("update-all-btn"),
+        "Update All must not be in the collapsed header"
+    );
+
+    // Both the path and the batch action live in the expanded body header.
+    let path_at = html.find("backend-api/Cargo.toml").expect("manifest path");
+    assert!(path_at > body_header, "path must be in the body header");
+    assert!(html.contains("class=\"update-all-btn\""));
 }
