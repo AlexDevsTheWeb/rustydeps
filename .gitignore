@@ -7,6 +7,7 @@
 
 # Generated reports and local HTML output
 /reports/
+/rustydeps-report.html
 
 !doc/**/*.html
 # Askama report template (source, not generated output)
