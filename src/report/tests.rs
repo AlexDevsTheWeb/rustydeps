@@ -49,8 +49,31 @@ fn renders_a_self_contained_document() {
     // No external resources: the report must open offline.
     assert!(!html.contains("http://"), "found an http:// reference");
     assert!(!html.contains("https://"), "found an https:// reference");
-    assert!(!html.contains("<link "));
+    // The only <link> is the embedded data-URI favicon; no external stylesheets.
+    assert_eq!(html.matches("<link ").count(), 1, "unexpected <link> tags");
+    assert!(
+        html.contains("<link rel=\"icon\" type=\"image/svg+xml\" href=\"data:image/svg+xml,"),
+        "favicon must be an embedded SVG data URI"
+    );
     assert!(!html.contains("<script src"));
+}
+
+#[test]
+fn renders_brand_logo_and_favicon() {
+    let html = render(&[dependency(
+        Ecosystem::Cargo,
+        "backend-api/Cargo.toml",
+        "tokio",
+        "0.2",
+        Some("1.53.3"),
+        UpdateType::Breaking,
+    )]);
+
+    // Inline SVG brand mark precedes the wordmark; no external image request.
+    assert!(html.contains("class=\"logo-icon\""));
+    assert!(html.contains(">RustyDeps</span>"));
+    assert!(html.contains("<link rel=\"icon\""));
+    assert!(!html.contains("<img"), "branding must not use an <img> tag");
 }
 
 #[test]
