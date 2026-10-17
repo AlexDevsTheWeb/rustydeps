@@ -489,6 +489,36 @@ link in the UI-font-branding implementation report's MR section.
 
 Validation: OKF validator PASSED (0 errors, 0 warnings).
 
+## 2026-10-17 — CLI progress & report refinements (issue #21 follow-up)
+
+Applied `doc/raw/2026-10-17/2026-10-17-issue21-fix.md` on the existing
+`feat/ui-branding-fonts` branch (folded into PR #22):
+
+- Added the feature subfolder `features/report-ux-refinements/` with
+  [[report-ux-refinements]] (feature page) and its implementation report.
+- `src/progress.rs` — all bars share one `indicatif::MultiProgress`;
+  `ScanProgress::println` writes with the bars suspended, and `ProgressWriter`
+  (a `tracing_subscriber::fmt::MakeWriter`) flushes log records under the same
+  suspend, so no orphan `Scanning repositories` frames remain.
+- `src/main.rs` — the reporter is built before `init_tracing` and threaded into
+  `run_scan`; `report_repositories` prints through `ScanProgress::println`.
+- `templates/report.html` — cards render collapsed by default; the collapsed
+  header keeps chevron/pill/name/counts only; the manifest path and `Update All`
+  move to a new `.project-deps-header` in the expanded body; the chevron is
+  enlarged; `updateCollapseBtnText()` runs on load.
+- `src/report/mod.rs` — rows sorted by risk severity then name;
+  `src/report/tests.rs` — updated the combined-command expectation and added
+  sort/collapsed/clean-header tests.
+- Updated [[architecture]] (progress and report-generator paragraphs),
+  [[index]] (feature row and source document), [[cli-scanning-ux]] /
+  [[ui-font-branding]] (follow-up links), and this log.
+
+Validation: `cargo fmt --all --check` clean; `cargo clippy --all-targets -- -D
+warnings` clean; `cargo test` 94 passed (90 + 4); a pty run reaches `3/3` with no
+leftover bar frame; non-TTY stdout has 0 escape sequences and JSON stays pure;
+OKF validator PASSED (0 errors, 0 warnings).
+
+
 
 
 

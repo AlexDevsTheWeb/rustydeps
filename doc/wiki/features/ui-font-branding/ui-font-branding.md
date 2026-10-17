@@ -91,5 +91,7 @@ enlargement was introduced.
 - [[html-report-spec]] — the report's visual contract.
 - [[architecture]] — the report generator that renders this template.
 - [[phase-4-html-report]] — the Stitch export this template came from.
+- [[report-ux-refinements]] — the follow-up that refines card disclosure and row
+  ordering.
 - [implementation report](implementation-report.md) — file-by-file detail and
   verification.

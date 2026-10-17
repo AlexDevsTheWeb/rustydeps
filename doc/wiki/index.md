@@ -42,6 +42,7 @@ and produces an interactive HTML report with optional AI changelog summaries.
 | [[docker-image]] | Multi-stage Alpine `Dockerfile`, `.dockerignore`, and the GHCR multi-arch build/publish workflow for CI usage; [implementation report](features/docker-image/implementation-report.md). |
 | [[cli-scanning-ux]] | Interactive scan progress (spinners, a per-repository `pos/len` counter, per-manifest metrics), the non-TTY/JSON fallback, and the v0.2.0 version bump; [implementation report](features/cli-scanning-ux/implementation-report.md). |
 | [[ui-font-branding]] | HTML report type-scale bump (12/13/14/16px) plus an inline SVG brand logo and an embedded data-URI SVG favicon, keeping the report self-contained; [implementation report](features/ui-font-branding/implementation-report.md). |
+| [[report-ux-refinements]] | Orphan-free CLI progress (`MultiProgress` + suspended writes) and report card refinements (collapsed by default, clean headers, path + Update All in the body, rows sorted by risk); [implementation report](features/report-ux-refinements/implementation-report.md). |
 
 ## Source documents
 
@@ -68,6 +69,9 @@ and produces an interactive HTML report with optional AI changelog summaries.
   brief implemented by [[cli-scanning-ux]].
 - `doc/raw/2026-10-17/2026-10-17-issue21.md` — the issue #21 report font
   scaling and branding brief implemented by [[ui-font-branding]].
+- `doc/raw/2026-10-17/2026-10-17-issue21-fix.md` — the issue #21 follow-up
+  (CLI progress rendering + report card refinements) implemented by
+  [[report-ux-refinements]].
 
 ## Conventions
 
