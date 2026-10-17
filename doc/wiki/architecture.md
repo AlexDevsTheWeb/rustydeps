@@ -6,7 +6,7 @@ status: active
 version: 0.1.0
 license: CC-BY-4.0
 created: 2026-10-14
-updated: 2026-10-15
+updated: 2026-10-17
 tags: [architecture, rust, cli, dto]
 ---
 
@@ -49,6 +49,14 @@ terminal. `--offline` skips registry lookups. For `--format html` it writes the
 self-contained report to `--output`, prints a `file://` URL, and (unless
 `--no-open`) launches it in the default browser via the `open` crate — a failure
 to open is logged as a warning and never fails the scan.
+
+Scan progress is reported by `src/progress.rs` (`ScanProgress`, a wrapper over
+`indicatif`): a spinner covers manifest discovery and registry resolution, and a
+`pos/len` counter covers per-repository reporting, where `report_repositories`
+prints one `✔ Scanned '<relative path>': N dependencies (<ecosystem>)` line per
+manifest. Bars draw to stderr and are hidden whenever stderr is not an
+interactive terminal; `--format json` additionally suppresses the banner and the
+status lines so stdout stays a single JSON document. See [[cli-scanning-ux]].
 
 ### Filesystem walk (`src/scanner.rs`)
 

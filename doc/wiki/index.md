@@ -6,7 +6,7 @@ status: active
 version: 0.1.0
 license: CC-BY-4.0
 created: 2026-10-14
-updated: 2026-10-15
+updated: 2026-10-17
 tags: [index, rustydeps, llm-wiki]
 ---
 
@@ -40,6 +40,7 @@ and produces an interactive HTML report with optional AI changelog summaries.
 | [[phase-5-ecosystems]] | PyPI, Go, and Composer parsers and registry clients behind the existing traits; [implementation report](features/phase-5-ecosystems/implementation-report.md). |
 | [[release-automation]] | Tag-triggered GitHub Actions release pipeline (Linux/macOS binaries) and the full README; [implementation report](features/release-automation/implementation-report.md). |
 | [[docker-image]] | Multi-stage Alpine `Dockerfile`, `.dockerignore`, and the GHCR multi-arch build/publish workflow for CI usage; [implementation report](features/docker-image/implementation-report.md). |
+| [[cli-scanning-ux]] | Interactive scan progress (spinners, a per-repository `pos/len` counter, per-manifest metrics), the non-TTY/JSON fallback, and the v0.2.0 version bump; [implementation report](features/cli-scanning-ux/implementation-report.md). |
 
 ## Source documents
 
@@ -60,6 +61,8 @@ and produces an interactive HTML report with optional AI changelog summaries.
   and GHCR publishing brief (issue #15) implemented by [[docker-image]].
 - `doc/raw/2026-10-15/2026-10-15-issue15-docker.md` — development report for the
   Docker work.
+- `doc/raw/2026-10-17/2026-10-17-issue19.md` — the issue #19 CLI scanning UX
+  brief implemented by [[cli-scanning-ux]].
 
 ## Conventions
 

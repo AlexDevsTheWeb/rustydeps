@@ -6,7 +6,7 @@ status: active
 version: 0.1.0
 license: CC-BY-4.0
 created: 2026-10-14
-updated: 2026-10-15
+updated: 2026-10-17
 tags: [log, history]
 ---
 
@@ -396,5 +396,48 @@ HTML). Unverified: the `linux/arm64` leg and a real GHCR push, which only run on
 Validation: workflow YAML parses and all `run:` blocks pass `bash -n`;
 `cargo fmt`/`clippy`/`test` (85) unaffected; OKF validator PASSED (0 errors,
 0 warnings).
+
+## 2026-10-17 — CLI scanning UX & v0.2.0 (issue #19)
+
+Applied `doc/raw/2026-10-17/2026-10-17-issue19.md` (issue #19, "Improvement:
+review CLI interface when scanning"), preparing release v0.2.0:
+
+- Added the feature subfolder `features/cli-scanning-ux/` with
+  [[cli-scanning-ux]] (feature page) and its implementation report.
+- `src/progress.rs` (new) — `ScanProgress`, a thin wrapper over `indicatif`:
+  spinners for discovery and registry resolution, a `pos/len` counter for
+  per-repository reporting, hidden when stderr is not a TTY. Pure
+  `project_label` and `repository_summary` helpers.
+- `src/main.rs` — spinners around discovery and resolution; a new
+  `report_repositories` prints `✔ Scanned '<relative path>': N dependencies
+  (<ecosystem>)` per manifest and advances the `Scanning repositories [bar]
+  X/N` counter. `--format json` suppresses the banner and all status lines so
+  stdout stays one JSON document (bars already draw to stderr).
+- `src/scanner.rs` — `ManifestType::ecosystem_label()` for the report-matching
+  pill labels.
+- `Cargo.toml`/`Cargo.lock` — `version = "0.2.0"` and `indicatif = "0.18"`.
+  `README.md` — banner, badge and Docker/CI examples bumped to `0.2.0`.
+- Updated [[architecture]] (CLI progress paragraph), [[index]] (feature row and
+  source document), and this log.
+
+The brief's step 5 names a wiki path under `doc/raw/`; `doc/raw/` is immutable
+input in this repository, so the documentation lives under
+`doc/wiki/features/cli-scanning-ux/` (deviation recorded on the feature page and
+the implementation report).
+
+Validation: `cargo fmt --all --check` clean; `cargo clippy --all-targets -- -D
+warnings` clean; `cargo test` 89 passed (85 + 3 progress + 1 scanner);
+`cargo build --release` succeeds and `--version` reports `rustydeps 0.2.0`;
+non-TTY and `--format json` runs emit no animation and a clean JSON stream; a
+pty run shows the spinners and the `0/2 → 2/2` counter; OKF validator PASSED
+(0 errors, 0 warnings).
+
+## 2026-10-17 — CLI scanning UX draft PR opened
+
+Opened draft PR #20 (`feat/cli-scanning-ux` → `development`) and recorded the
+link in the CLI-scanning-UX implementation report's MR section.
+
+Validation: OKF validator PASSED (0 errors, 0 warnings).
+
 
 
