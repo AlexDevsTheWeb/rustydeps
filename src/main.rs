@@ -8,6 +8,7 @@
 mod ai;
 mod classifier;
 mod cli;
+mod config;
 mod model;
 mod parser;
 mod progress;
@@ -27,6 +28,7 @@ use tracing::{info, warn};
 use crate::ai::Summarizer;
 use crate::classifier::{classify, ClassifiedDependency};
 use crate::cli::{Cli, Command, OutputFormat, ScanArgs};
+use crate::config::AiOverrides;
 use crate::model::{Ecosystem, UpdateType};
 use crate::parser::{parse_manifests, ParsedDependency};
 use crate::registry::composer::ComposerClient;
@@ -160,8 +162,19 @@ async fn run_scan(args: ScanArgs, progress: progress::ScanProgress) -> Result<()
         lookups
     };
 
-    let summarizer = Summarizer::new(args.ai);
-    let classified = classify_all(&dependencies, &lookups, &summarizer);
+    let summarizer = Summarizer::from_overrides(&AiOverrides {
+        enable: args.ai,
+        disable: args.no_ai,
+        model: args.ai_model.clone(),
+    });
+    let mut classified = classify_all(&dependencies, &lookups);
+
+    if summarizer.is_enabled() {
+        let analyzing = progress.spinner("Generating per-library AI analyses…");
+        summarizer.summarize_all(&mut classified).await;
+        analyzing.finish_and_clear();
+    }
+
     let duration_ms = started.elapsed().as_millis();
 
     match args.format {
@@ -349,12 +362,10 @@ async fn resolve_ecosystem<C, F>(
     }
 }
 
-/// Classify every dependency against its resolved latest version and attach a
-/// summary.
+/// Classify every dependency against its resolved latest version.
 fn classify_all(
     dependencies: &[ParsedDependency],
     lookups: &VersionLookups,
-    summarizer: &Summarizer,
 ) -> Vec<ClassifiedDependency> {
     dependencies
         .iter()
@@ -373,9 +384,7 @@ fn classify_all(
                 );
             }
 
-            let mut classified = classify(dependency, latest.as_deref());
-            classified.ai_summary = summarizer.summarize(classified.update_type);
-            classified
+            classify(dependency, latest.as_deref())
         })
         .collect()
 }
@@ -439,20 +448,19 @@ fn print_summary(dependencies: &[ClassifiedDependency]) {
     println!();
     println!("{}", tally(dependencies));
 
-    let summaries: Vec<&ClassifiedDependency> = dependencies
+    let analyzed = dependencies
         .iter()
         .filter(|dependency| dependency.ai_summary.is_some())
-        .collect();
-    if !summaries.is_empty() {
+        .count();
+    if analyzed > 0 {
+        let cached = dependencies
+            .iter()
+            .filter(|dependency| dependency.ai_cached)
+            .count();
         println!();
-        println!("Summaries:");
-        for dependency in summaries {
-            println!(
-                "  {} — {}",
-                dependency.name,
-                dependency.ai_summary.as_deref().unwrap_or_default()
-            );
-        }
+        println!(
+            "AI analyses: {analyzed} package(s), {cached} served from the local cache (see the HTML report)."
+        );
     }
 }
 

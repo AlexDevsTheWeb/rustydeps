@@ -32,10 +32,19 @@ pub struct ScanArgs {
     #[arg(default_value = ".")]
     pub path: PathBuf,
 
-    /// Enable AI-driven changelog summaries (templated until the Phase 5 AI
-    /// module; live providers are detected from the environment).
+    /// Enable AI-driven per-library changelog summaries. Also enabled when the
+    /// configuration file sets `ai.enabled`.
     #[arg(long)]
     pub ai: bool,
+
+    /// Disable AI summaries for this scan, even when the configuration enables
+    /// them.
+    #[arg(long)]
+    pub no_ai: bool,
+
+    /// Override the configured AI model (for example `gpt-4o-mini`).
+    #[arg(long, value_name = "MODEL")]
+    pub ai_model: Option<String>,
 
     /// Path for the generated HTML report (used with `--format html`).
     #[arg(short, long, default_value = "rustydeps-report.html")]
@@ -84,6 +93,27 @@ mod tests {
         let cli = Cli::try_parse_from(["rustydeps", "scan", "--no-open"]).expect("parse");
         match cli.command {
             Command::Scan(args) => assert!(args.no_open),
+        }
+    }
+
+    #[test]
+    fn parses_ai_overrides() {
+        let cli = Cli::try_parse_from(["rustydeps", "scan", "--ai", "--ai-model", "gpt-4o-mini"])
+            .expect("parse");
+        match cli.command {
+            Command::Scan(args) => {
+                assert!(args.ai);
+                assert!(!args.no_ai);
+                assert_eq!(args.ai_model.as_deref(), Some("gpt-4o-mini"));
+            }
+        }
+    }
+
+    #[test]
+    fn no_ai_is_available_as_a_flag() {
+        let cli = Cli::try_parse_from(["rustydeps", "scan", "--no-ai"]).expect("parse");
+        match cli.command {
+            Command::Scan(args) => assert!(args.no_ai),
         }
     }
 }

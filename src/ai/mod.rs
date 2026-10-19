@@ -1,10 +1,13 @@
-//! AI summary module (Phase 3 scaffold).
+//! Per-library AI changelog summarizer.
 //!
-//! Phase 3 detects whether an LLM provider is configured and always produces a
-//! deterministic templated summary for at-risk and breaking updates. Live
-//! provider calls (Anthropic / OpenAI / a custom endpoint) land in Phase 5, the
-//! dedicated AI changelog summarizer.
+//! Each outdated, registry-resolved dependency gets its own OpenAI-compatible
+//! request and a cached Markdown analysis. Configuration is layered (files,
+//! `RUSTYDEPS_AI_*` environment variables, CLI flags) and every AI failure is
+//! non-fatal: the report simply renders without an analysis.
 
+pub mod cache;
+pub mod client;
+pub mod prompt;
 pub mod summary;
 
 pub use summary::Summarizer;

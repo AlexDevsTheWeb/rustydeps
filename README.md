@@ -135,8 +135,11 @@ Notes:
 - **Self-contained HTML report** — one file with inline CSS/JS: project-centric cards,
   risk dots, an inline changelog drawer with copyable upgrade commands, search and risk
   filters, and an "Update All" batch command. Opens offline, no CDN.
-- **AI summaries** — `--ai` attaches a one-line summary to at-risk and breaking updates
-  (templated today; live provider calls are on the roadmap).
+- **Granular per-library AI analysis** — with BYOK configuration, every outdated
+  package gets its own Markdown briefing (breaking changes, security context,
+  performance impact, migration advice) inside the report drawer. Analyses are
+  cached per ecosystem + package + target version, so repeat scans cost nothing.
+  Enable it with `ai.enabled` in the config or `--ai`; `--no-ai` disables it.
 - **Concurrent, polite registry access** — bounded concurrency (10 in flight) with graceful
   degradation: a failed lookup is recorded as `unknown` and never aborts the scan.
 - **`--verbose` / `-v`** — debug-level logging to stderr.
@@ -150,7 +153,9 @@ Arguments:
   [PATH]  Directory to scan (default: .)
 
 Options:
-      --ai              Enable AI-driven changelog summaries
+      --ai              Enable per-library AI changelog summaries
+      --no-ai           Disable AI summaries even when the config enables them
+      --ai-model <MODEL> Override the configured AI model
   -o, --output <PATH>   Report output path (default: rustydeps-report.html)
       --format <FORMAT> html | json (default: html)
       --offline         Skip registry lookups (alias: --no-fetch)
@@ -160,9 +165,50 @@ Options:
   -V, --version         Print version
 ```
 
+## AI changelog summaries (BYOK)
+
+RustyDeps never ships a shared API key. Configure your own provider in
+`~/.config/rustydeps/config.json`. If that file does not exist, a project-local
+`.rustydeps.json` is used instead (it is git-ignored in case it holds a key):
+
+```json
+{
+  "ai": {
+    "enabled": true,
+    "provider": "openai",
+    "api_key": "sk-...",
+    "model": "gpt-4o-mini",
+    "endpoint": "https://api.openai.com/v1",
+    "max_tokens": 400,
+    "cache_enabled": true
+  }
+}
+```
+
+`provider` accepts `openai`, `gemini`, and `ollama`. Gemini uses Google's
+OpenAI-compatible endpoint; Ollama defaults to `http://localhost:11434/v1` and
+needs no API key. Every request is bounded at 10 seconds and only outdated,
+registry-resolved packages are analyzed.
+
+Environment variables override the file; CLI flags override both:
+
+| Variable | Purpose |
+|----------|---------|
+| `RUSTYDEPS_AI_ENABLED` | `true`/`false` |
+| `RUSTYDEPS_AI_PROVIDER` | `openai`, `gemini`, or `ollama` |
+| `RUSTYDEPS_AI_API_KEY` | API key (falls back to `OPENAI_API_KEY` / `GEMINI_API_KEY`) |
+| `RUSTYDEPS_AI_MODEL` | Model name |
+| `RUSTYDEPS_AI_ENDPOINT` | OpenAI-compatible base URL |
+
+Generated analyses are cached at
+`~/.cache/rustydeps/changelogs/{ecosystem}_{package}_{target_version}.json`.
+Remove that directory to force fresh analyses. If the provider is disabled,
+misconfigured, offline, rate-limited, or slow, the scan still succeeds: the
+drawer links to the package's published versions and omits the AI card.
+
 ## Releasing
 
-Pushing a tag matching `v*` (for example `v0.2.0`) triggers the
+Pushing a tag matching `v*` (for example `v0.3.0`) triggers the
 [release workflow](.github/workflows/release.yml), which builds binaries for Linux
 (`x86_64-unknown-linux-gnu`) and macOS (`x86_64-apple-darwin`, `aarch64-apple-darwin`),
 then attaches them (with checksums and a changelog summary) to the GitHub Release.
@@ -171,8 +217,8 @@ which publishes the multi-arch image to `ghcr.io/alexdevstheweb/rustydeps`
 tagged with the release version (see [Docker](#docker)).
 
 ```bash
-git tag v0.2.0
-git push origin v0.2.0
+git tag v0.3.0
+git push origin v0.3.0
 ```
 
 ## Development
