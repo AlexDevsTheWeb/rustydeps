@@ -75,6 +75,10 @@ version is never pointed at a prerelease (`Unknown`).
 live, changelog-aware summaries are Phase 5; the fallback is always present, so
 the report has text to show regardless.
 
+> Superseded: Milestone 0.3.0 replaced this scaffold with live per-library
+> analyses and removed the templated fallback. See
+> [[ai-changelog-summarizer]].
+
 ### CLI banner and offline mode
 
 `scan` prints the "Full Block Solid" ASCII banner (Rust-orange logo, cyan

@@ -6,7 +6,7 @@ status: active
 version: 0.1.0
 license: CC-BY-4.0
 created: 2026-10-14
-updated: 2026-10-17
+updated: 2026-10-19
 tags: [log, history]
 ---
 
@@ -517,6 +517,42 @@ Validation: `cargo fmt --all --check` clean; `cargo clippy --all-targets -- -D
 warnings` clean; `cargo test` 94 passed (90 + 4); a pty run reaches `3/3` with no
 leftover bar frame; non-TTY stdout has 0 escape sequences and JSON stays pure;
 OKF validator PASSED (0 errors, 0 warnings).
+
+## 2026-10-19 — Milestone 0.3.0: per-library AI changelog summarizer
+
+Applied `doc/raw/2026-10-19/2026-10-19-v0.3.0.md` on
+`feat/ai-changelog-summarizer` (version `0.3.0-dev`):
+
+- Added the feature subfolder `features/ai-changelog-summarizer/` with
+  [[ai-changelog-summarizer]] and its implementation report.
+- `src/config/mod.rs` — layered BYOK configuration (user
+  `~/.config/rustydeps/config.json`, project `.rustydeps.json` fallback,
+  `RUSTYDEPS_AI_*`, CLI flags), provider
+  defaults and native key fallbacks, cache path, and validation errors.
+- `src/ai/client.rs`, `src/ai/prompt.rs`, `src/ai/cache.rs` — one
+  OpenAI-compatible client (OpenAI/Gemini/Ollama, 10s timeout), the fixed
+  four-section prompt, and per-version JSON caching under
+  `~/.cache/rustydeps/changelogs/`.
+- `src/ai/summary.rs` — cache-first, four-way concurrent `Summarizer` for every
+  outdated resolved package; the Phase 3 templated summaries are removed.
+- `src/cli.rs`, `src/main.rs` — `--no-ai` and `--ai-model`, layered settings
+  loading, an AI spinner, and a compact analysis/cache tally.
+- `src/classifier/mod.rs` — `ClassifiedDependency.ai_cached`.
+- `src/report/markdown.rs`, `src/report/mod.rs`, `templates/report.html` — safe
+  Markdown rendering, the 🤖 AI card, `⚡ Cached analysis` badge, fallback note,
+  and per-ecosystem changelog links.
+- `README.md`, `.gitignore`, `Cargo.toml`/`Cargo.lock` — BYOK docs, ignored
+  local config, `pulldown-cmark`, and the `0.3.0-dev` version.
+- Updated [[architecture]] (CLI, report generator, AI module, DTOs),
+  [[roadmap]] (Phase 6 complete), [[html-report-spec]] (AI card and drawer), and
+  [[index]] (feature row and source document).
+
+Validation: `cargo fmt --all --check` clean; `cargo clippy --all-targets -- -D
+warnings` clean; `cargo test` 122 passed; `cargo build --release` succeeded; an
+offline JSON scan and an HTML scan both completed with `ai_summary: null`.
+A local OpenAI-compatible mock served 19 analyses; a second scan made no new
+requests and rendered 19 `⚡ Cached analysis` badges. OKF validator PASSED
+(0 errors, 0 warnings).
 
 
 

@@ -102,6 +102,9 @@ and GitHub release/diff links need changelog data (Phase 5); the drawer shows
 the available summary and the update command. The export's PyPI and Go cards are
 mock data — RustyDeps supports Cargo and npm today (Phase 6 adds more).
 
+> Milestone 0.3.0 added the per-library AI card and a standard package-changelog
+> link to this drawer; see [[ai-changelog-summarizer]].
+
 ## Design decisions
 
 - **Askama** (compile-time, auto-escaping) over Tera/maud: type-safe templates
