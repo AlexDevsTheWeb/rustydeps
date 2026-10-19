@@ -552,7 +552,8 @@ warnings` clean; `cargo test` 122 passed; `cargo build --release` succeeded; an
 offline JSON scan and an HTML scan both completed with `ai_summary: null`.
 A local OpenAI-compatible mock served 19 analyses; a second scan made no new
 requests and rendered 19 `⚡ Cached analysis` badges. OKF validator PASSED
-(0 errors, 0 warnings).
+(0 errors, 0 warnings). Opened draft PR
+[#24](https://github.com/AlexDevsTheWeb/rustydeps/pull/24).
 
 
 

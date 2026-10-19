@@ -104,7 +104,8 @@ path degrades to a normal report row with a package changelog link.
 
 ## MR
 
-Draft PR: pending (branch `feat/ai-changelog-summarizer` → `development`).
+Draft PR [#24](https://github.com/AlexDevsTheWeb/rustydeps/pull/24)
+(`feat/ai-changelog-summarizer` → `development`).
 
 ## Related
 
