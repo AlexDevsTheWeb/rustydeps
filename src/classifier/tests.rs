@@ -112,6 +112,7 @@ fn classify_builds_the_dto() {
     assert_eq!(classified.update_type, UpdateType::Safe);
     assert_eq!(classified.latest_version.as_deref(), Some("1.0.229"));
     assert_eq!(classified.ai_summary, None);
+    assert!(!classified.ai_cached);
     assert!(!classified.is_dev_dependency);
 
     let unknown = classify(&dependency, None);

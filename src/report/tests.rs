@@ -24,6 +24,7 @@ fn dependency(
         manifest_path: PathBuf::from(manifest),
         is_dev_dependency: false,
         ai_summary: None,
+        ai_cached: false,
     }
 }
 
@@ -46,16 +47,17 @@ fn renders_a_self_contained_document() {
     assert!(html.starts_with("<!DOCTYPE html>"));
     assert!(html.contains("<style>"));
     assert!(html.contains("<script>"));
-    // No external resources: the report must open offline.
-    assert!(!html.contains("http://"), "found an http:// reference");
-    assert!(!html.contains("https://"), "found an https:// reference");
+    // No external resources: the report must open offline. Changelog anchors
+    // may point at a package page, but nothing is fetched to render the page.
+    assert!(!html.contains("src=\"http"), "found an external resource");
+    assert!(!html.contains("<script src"));
+    assert!(!html.contains("@import"));
     // The only <link> is the embedded data-URI favicon; no external stylesheets.
     assert_eq!(html.matches("<link ").count(), 1, "unexpected <link> tags");
     assert!(
         html.contains("<link rel=\"icon\" type=\"image/svg+xml\" href=\"data:image/svg+xml,"),
         "favicon must be an embedded SVG data URI"
     );
-    assert!(!html.contains("<script src"));
 }
 
 #[test]
@@ -90,14 +92,15 @@ fn escapes_untrusted_dependency_data() {
 
     let html = render(&[evil]);
 
-    // Askama HTML-escapes automatically; accept either named or numeric entities.
+    // Askama HTML-escapes the package name; raw HTML in the AI Markdown is
+    // dropped by the renderer instead of being injected into the report.
     assert!(!html.contains("<script>alert"));
     assert!(
         html.contains("&lt;script&gt;alert(1)&lt;/script&gt;")
             || html.contains("&#60;script&#62;alert(1)&#60;/script&#62;")
     );
     assert!(!html.contains("<img src=x"));
-    assert!(html.contains("&lt;img") || html.contains("&#60;img"));
+    assert!(!html.contains("onerror"));
 }
 
 #[test]
@@ -361,7 +364,7 @@ fn renders_risk_indicators_and_filter_pills() {
 }
 
 #[test]
-fn renders_the_ai_tag_when_a_summary_is_present() {
+fn renders_the_ai_tag_and_analysis_card() {
     let mut dep = dependency(
         Ecosystem::Cargo,
         "backend-api/Cargo.toml",
@@ -370,12 +373,86 @@ fn renders_the_ai_tag_when_a_summary_is_present() {
         Some("1.53.3"),
         UpdateType::Breaking,
     );
-    dep.ai_summary = Some("Major version bump — potential breaking API changes.".to_string());
+    dep.ai_summary = Some(
+        "### 🚨 Breaking Changes & Deprecations\n\n\
+         Use `tokio::runtime` instead.\n\n\
+         ### 💡 Actionable Migration Advice\n\n\
+         Update the manifest."
+            .to_string(),
+    );
 
     let html = render(&[dep]);
 
     assert!(html.contains("class=\"ai-prefix-icon\">AI<"));
-    assert!(html.contains("potential breaking API changes"));
+    assert!(html.contains("🤖 AI Library Release Analysis"));
+    assert!(html.contains("class=\"ai-analysis\""));
+    assert!(html.contains("<h3>🚨 Breaking Changes &amp; Deprecations</h3>"));
+    assert!(html.contains("Use <code>tokio::runtime</code> instead."));
+    assert!(html.contains("View package changelog"));
+    assert!(html.contains("https://crates.io/crates/tokio/versions"));
+    assert!(!html.contains("⚡ Cached analysis"));
+    assert!(!html.contains("AI analysis unavailable"));
+}
+
+#[test]
+fn marks_analyses_served_from_the_cache() {
+    let mut dep = dependency(
+        Ecosystem::Cargo,
+        "backend-api/Cargo.toml",
+        "tokio",
+        "0.2",
+        Some("1.53.3"),
+        UpdateType::Breaking,
+    );
+    dep.ai_summary =
+        Some("### 🛡️ Security & Vulnerability Context\n\nNo known advisories.".to_string());
+    dep.ai_cached = true;
+
+    let data = ReportData::from_classified(std::slice::from_ref(&dep), &ReportMeta::default());
+    assert!(data.projects[0].dependencies[0].ai_cached);
+
+    let html = render(&[dep]);
+    assert!(html.contains("⚡ Cached analysis"));
+}
+
+#[test]
+fn renders_a_standard_changelog_link_without_ai() {
+    let html = render(&[dependency(
+        Ecosystem::Npm,
+        "web-dashboard/package.json",
+        "express",
+        "^4.18.0",
+        Some("5.3.0"),
+        UpdateType::Breaking,
+    )]);
+
+    assert!(html.contains("AI analysis unavailable"));
+    assert!(html.contains("View package changelog"));
+    assert!(html.contains("https://www.npmjs.com/package/express?activeTab=versions"));
+    assert!(!html.contains("class=\"ai-analysis\""));
+}
+
+#[test]
+fn condenses_markdown_into_a_single_row_insight() {
+    let mut dep = dependency(
+        Ecosystem::Cargo,
+        "backend-api/Cargo.toml",
+        "tokio",
+        "0.2",
+        Some("1.53.3"),
+        UpdateType::Breaking,
+    );
+    dep.ai_summary = Some(
+        "### 🚨 Breaking Changes\n\n\
+         - **Replace** `old` with [new](https://example.test)."
+            .to_string(),
+    );
+
+    let data = ReportData::from_classified(&[dep], &ReportMeta::default());
+    assert_eq!(
+        data.projects[0].dependencies[0].insight,
+        "Replace old with new."
+    );
 }
 
 #[test]

@@ -3,18 +3,18 @@ title: "RustyDeps — Roadmap"
 type: roadmap
 description: "Six delivery phases from Rust setup to multi-ecosystem expansion."
 status: active
-version: 0.1.0
+version: 0.3.0
 license: CC-BY-4.0
 created: 2026-10-14
-updated: 2026-10-15
+updated: 2026-10-19
 tags: [roadmap, phases, planning]
 ---
 
 # Roadmap
 
 RustyDeps ships in six incremental phases. Each phase leaves the tool in a
-usable state and maps to modules described in [[architecture]]. Phases 1
-through 5 are complete; the AI changelog summarizer is next.
+usable state and maps to modules described in [[architecture]]. All six phases
+are complete; Milestone 0.3.0 delivered the per-library AI summarizer.
 
 ## Phase status
 
@@ -25,7 +25,7 @@ through 5 are complete; the AI changelog summarizer is next.
 | 3 | Unified DTO & SemVer Logic | ✅ Done |
 | 4 | Interactive HTML Report Engine | ✅ Done |
 | 5 | Multi-ecosystem Expansion (PyPI, Go, Composer) | ✅ Done |
-| 6 | AI Changelog Summarizer Module | Next |
+| 6 | AI Changelog Summarizer Module | ✅ Done |
 
 ## Phase 1 — Rust Setup & CLI ✅
 
@@ -74,15 +74,24 @@ traits, and extended `Ecosystem` with `Pypi`/`Go`/`Composer`. Exit criteria met:
 the new ecosystems required no changes to the scanner or the report template.
 See [[phase-5-ecosystems]] and `doc/raw/2026-10-15/2026-10-15-phase5.md`.
 
-## Phase 6 — AI Changelog Summarizer
+## Phase 6 — AI Changelog Summarizer ✅
 
-Replace the Phase 3 templated summaries with live provider calls that fetch
-changelogs and flag migration notes, and broaden `AtRisk` with deprecation data.
-Exit criteria: `--ai` adds real summaries without becoming a hard dependency of
-a successful scan.
+Implemented Milestone 0.3.0 (`doc/raw/2026-10-19/2026-10-19-v0.3.0.md`). Every
+outdated, registry-resolved package now receives its own Markdown briefing:
+breaking changes, security context, performance/architectural impact, and
+migration advice. A layered BYOK configuration (user
+`~/.config/rustydeps/config.json`, project `.rustydeps.json` fallback,
+`RUSTYDEPS_AI_*`, CLI flags) selects an
+OpenAI-compatible provider (OpenAI, Gemini, Ollama). Analyses are cached per
+`{ecosystem}_{package}_{target_version}` and reused across projects. The report
+drawer renders the analysis as safe Markdown, with a cache badge and a standard
+changelog link. Exit criteria met: AI is optional, bounded to four concurrent
+requests with a 10-second timeout, and every failure leaves the scan and report
+intact. See [[ai-changelog-summarizer]].
 
 ## Related
 
 - [[architecture]] — the modules each phase builds.
+- [[ai-changelog-summarizer]] — the Phase 6 per-library AI summarizer.
 - [[index]] — knowledge-graph entrypoint.
 - `doc/raw/rustydeps-spec.md` — the requirements these phases satisfy.
