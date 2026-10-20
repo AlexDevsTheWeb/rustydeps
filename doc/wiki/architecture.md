@@ -6,7 +6,7 @@ status: active
 version: 0.3.0
 license: CC-BY-4.0
 created: 2026-10-14
-updated: 2026-10-19
+updated: 2026-10-20
 tags: [architecture, rust, cli, dto]
 ---
 
@@ -189,19 +189,32 @@ image request), on a 12/13/14/16px scale. See [[ui-font-branding]].
 
 ### AI module (`src/ai/`, `src/config/`)
 
-Optional and BYOK-configured (Milestone 0.3.0). `src/config/mod.rs` resolves
-settings in layers: CLI (`--ai`, `--no-ai`, `--ai-model`), `RUSTYDEPS_AI_*`
-environment variables, `~/.config/rustydeps/config.json` (XDG on Unix,
-`%APPDATA%` on Windows), then a project `.rustydeps.json` fallback when the user
-file is absent, then provider defaults. Malformed files or values disable AI for the run instead of
-failing the scan. `AiProvider` covers OpenAI, Gemini (OpenAI-compatible
-endpoint), and Ollama; hosted providers require a key, Ollama does not.
+Optional and BYOK-configured (Milestone 0.3.0, hardened by
+[[ai-provider-compat]]). `src/config/mod.rs` resolves settings in layers: CLI
+(`--ai`, `--no-ai`, `--ai-model`), `RUSTYDEPS_AI_*` environment variables,
+`~/.config/rustydeps/config.json` (XDG on Unix, `%APPDATA%` on Windows), then a
+project `.rustydeps.json` fallback when the user file is absent, then provider
+defaults. Malformed files or values disable AI for the run instead of failing
+the scan.
+
+`AiProvider` covers OpenAI (`gpt-4o-mini` at `https://api.openai.com/v1`), Gemini
+(`gemini-2.5-flash` at the OpenAI-compatible
+`https://generativelanguage.googleapis.com/v1beta/openai`), OpenRouter
+(`google/gemini-2.5-flash` at `https://openrouter.ai/api/v1`), Ollama
+(`llama3.1` at `http://localhost:11434/v1`, no key), and a custom proxy that
+requires an explicit endpoint and model and accepts an optional key. OpenAI,
+Gemini, and OpenRouter require keys; keys fall back to `OPENAI_API_KEY`,
+`GEMINI_API_KEY`/`GOOGLE_API_KEY`, and `OPENROUTER_API_KEY` respectively.
 
 `Summarizer` (`src/ai/summary.rs`) analyzes only `Safe`/`AtRisk`/`Breaking` rows
 with a resolved target. It checks `SummaryCache` first, then calls `AiClient`
 (`src/ai/client.rs`), an async `reqwest` chat-completions client with a
-10-second timeout, bounded to four concurrent packages. `src/ai/prompt.rs` fixes
-the four-section Markdown contract; one request is made per
+10-second timeout, bounded to four concurrent packages. `chat_endpoint`
+normalizes each provider base URL — bare origins, `/v1` or `/v1beta` roots,
+trailing slashes, full `/chat/completions` URLs, and query strings all resolve to
+one valid endpoint — and OpenRouter requests add `HTTP-Referer`/`X-Title`
+attribution headers. `src/ai/prompt.rs` fixes the four-section Markdown
+contract; one request is made per
 `(ecosystem, package, current_version, target_version)`.
 
 `SummaryCache` (`src/ai/cache.rs`) stores one JSON entry per target version at
@@ -214,7 +227,9 @@ The report converts the Markdown with `src/report/markdown.rs`
 (`pulldown-cmark`, raw HTML events dropped) and inserts it with Askama's
 `|safe` filter. Every failure — disabled, missing key, timeout, HTTP error,
 empty response, cache write error — is logged and leaves `ai_summary` as
-`None`; the scan and report still complete. See [[ai-changelog-summarizer]].
+`None`; the scan and report still complete. HTTP failures log the resolved
+request URL, status, and a single-line body excerpt. See
+[[ai-changelog-summarizer]] and [[ai-provider-compat]].
 
 ## Core DTOs
 

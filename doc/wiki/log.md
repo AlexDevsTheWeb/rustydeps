@@ -6,7 +6,7 @@ status: active
 version: 0.1.0
 license: CC-BY-4.0
 created: 2026-10-14
-updated: 2026-10-19
+updated: 2026-10-20
 tags: [log, history]
 ---
 
@@ -554,6 +554,38 @@ A local OpenAI-compatible mock served 19 analyses; a second scan made no new
 requests and rendered 19 `⚡ Cached analysis` badges. OKF validator PASSED
 (0 errors, 0 warnings). Opened draft PR
 [#24](https://github.com/AlexDevsTheWeb/rustydeps/pull/24).
+
+## 2026-10-20 — AI provider compatibility & README BYOK guide
+
+Applied `doc/raw/2026-10-20/2026-10-20-fix.md` on `fix/ai-provider-compat`:
+
+- Added the feature subfolder `features/ai-provider-compat/` with
+  [[ai-provider-compat]] and its implementation report.
+- `src/config/mod.rs` — `AiProvider` gains `OpenRouter` and `Custom`; added
+  provider defaults and label aliases, `OPENROUTER_API_KEY` fallback, optional
+  keys for custom proxies, and required model/endpoint semantics for custom;
+  expanded tests.
+- `src/ai/client.rs` — one provider-aware `chat_endpoint` normalizer handling
+  bare origins, `/v1` and `/v1beta` roots, trailing slashes, full endpoints, and
+  query strings; OpenRouter `HTTP-Referer`/`X-Title` headers; URL-bearing
+  transport/status errors; whitespace-collapsed, character-safe body snippets;
+  tests across every provider.
+- `README.md` — rewrote the *AI changelog summaries (BYOK)* section with the
+  local-first model, config and cache paths, a provider table, five copy-paste
+  configurations, environment/CLI tables, and diagnostics guidance.
+- Updated [[architecture]] (AI module), [[ai-changelog-summarizer]] (provider
+  list and follow-up link), [[index]] (feature row and source document), and
+  this log.
+
+The brief's inline code spans are empty in the source file; provider labels,
+endpoint forms, and variable names were reconstructed from the existing
+implementation. Per the brief, no new development report was created under
+`doc/raw/`; the notes live in the wiki. The source brief is committed unchanged.
+
+Validation: `cargo fmt --all --check` clean; `cargo clippy --all-targets -- -D
+warnings` clean; `cargo test` 130 passed; `cargo build --release` succeeded; a
+CLI smoke test against a local mock confirmed `/v1/chat/completions` resolution
+and URL/status/body diagnostics; OKF validator PASSED (0 errors, 0 warnings).
 
 
 
