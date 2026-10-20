@@ -85,7 +85,8 @@ OpenRouter headers.
 
 ## MR
 
-Draft PR: _pending — filled in after the draft is opened._
+Draft PR [#25](https://github.com/AlexDevsTheWeb/rustydeps/pull/25)
+(`fix/ai-provider-compat` → `development`).
 
 ## Related
 

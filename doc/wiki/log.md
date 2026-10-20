@@ -587,6 +587,14 @@ warnings` clean; `cargo test` 130 passed; `cargo build --release` succeeded; a
 CLI smoke test against a local mock confirmed `/v1/chat/completions` resolution
 and URL/status/body diagnostics; OKF validator PASSED (0 errors, 0 warnings).
 
+## 2026-10-20 — AI provider compatibility draft PR opened
+
+Opened draft PR [#25](https://github.com/AlexDevsTheWeb/rustydeps/pull/25)
+(`fix/ai-provider-compat` → `development`) and recorded the link in the
+implementation report's MR section.
+
+Validation: OKF validator PASSED (0 errors, 0 warnings).
+
 
 
 
