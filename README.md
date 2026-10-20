@@ -167,9 +167,60 @@ Options:
 
 ## AI changelog summaries (BYOK)
 
-RustyDeps never ships a shared API key. Configure your own provider in
-`~/.config/rustydeps/config.json`. If that file does not exist, a project-local
-`.rustydeps.json` is used instead (it is git-ignored in case it holds a key):
+RustyDeps is **local-first and BYOK** (Bring Your Own Key). It ships no shared
+key, runs no RustyDeps proxy, and collects no telemetry: your machine talks
+directly to the provider you configure, and every generated analysis is cached
+on disk.
+
+- **Config file:** `~/.config/rustydeps/config.json`
+  (`%APPDATA%\rustydeps\config.json` on Windows). A project-local
+  `.rustydeps.json` is used only when that file does not exist; it is git-ignored
+  because it may contain a key.
+- **Cache:** `~/.cache/rustydeps/changelogs/{ecosystem}_{package}_{target_version}.json`
+  (`%LOCALAPPDATA%\rustydeps\changelogs\` on Windows). A repeat scan of the same
+  package version makes no request and costs no tokens — delete the directory to
+  force fresh analyses.
+- **Request scope:** only outdated, registry-resolved packages are analyzed, at
+  most four concurrently, with a 10-second timeout per request. The generated
+  Markdown appears in the package drawer; every failure degrades gracefully to
+  the standard changelog link.
+
+### Supported providers
+
+| Provider | `provider` value | Default endpoint | Default model | API key |
+|----------|------------------|------------------|---------------|---------|
+| OpenAI | `openai` | `https://api.openai.com/v1` | `gpt-4o-mini` | Required |
+| Google Gemini (AI Studio) | `gemini` / `google` | `https://generativelanguage.googleapis.com/v1beta/openai` | `gemini-2.5-flash` | Required |
+| OpenRouter | `openrouter` | `https://openrouter.ai/api/v1` | `google/gemini-2.5-flash` | Required |
+| Ollama | `ollama` | `http://localhost:11434/v1` | `llama3.1` | Not required |
+| Custom OpenAI-compatible proxy | `custom` / `openai-compatible` | Your URL | Your model | Optional |
+
+Any provider can override `model` and `endpoint`; the custom provider requires
+both. The endpoint validator accepts a bare origin (`https://api.openai.com`), a
+provider base (`.../v1`, `.../v1beta/openai`), or a full
+`.../chat/completions` URL, with or without a trailing slash. Existing query
+strings are preserved.
+
+### Copy-paste configuration
+
+Save one of these as `~/.config/rustydeps/config.json` (or as
+`.rustydeps.json` in a project root).
+
+**Google Gemini (AI Studio)** — create a key at
+<https://aistudio.google.com/apikey>:
+
+```json
+{
+  "ai": {
+    "enabled": true,
+    "provider": "gemini",
+    "api_key": "AIza...",
+    "model": "gemini-2.5-flash"
+  }
+}
+```
+
+**OpenAI** — create a key at <https://platform.openai.com/api-keys>:
 
 ```json
 {
@@ -177,34 +228,82 @@ RustyDeps never ships a shared API key. Configure your own provider in
     "enabled": true,
     "provider": "openai",
     "api_key": "sk-...",
-    "model": "gpt-4o-mini",
-    "endpoint": "https://api.openai.com/v1",
-    "max_tokens": 400,
-    "cache_enabled": true
+    "model": "gpt-4o-mini"
   }
 }
 ```
 
-`provider` accepts `openai`, `gemini`, and `ollama`. Gemini uses Google's
-OpenAI-compatible endpoint; Ollama defaults to `http://localhost:11434/v1` and
-needs no API key. Every request is bounded at 10 seconds and only outdated,
-registry-resolved packages are analyzed.
+**OpenRouter** — create a key at <https://openrouter.ai/keys>; any model from
+its catalogue can be named, and `openrouter/auto` lets OpenRouter choose:
+
+```json
+{
+  "ai": {
+    "enabled": true,
+    "provider": "openrouter",
+    "api_key": "sk-or-v1-...",
+    "model": "google/gemini-2.5-flash"
+  }
+}
+```
+
+**Ollama (100% free, local and offline)** — start the server
+(`ollama serve`) and pull a model (`ollama pull llama3.1`) first:
+
+```json
+{
+  "ai": {
+    "enabled": true,
+    "provider": "ollama",
+    "model": "llama3.1"
+  }
+}
+```
+
+**Custom OpenAI-compatible proxy** — point `endpoint` at your gateway and name
+its model; `api_key` is optional for keyless local gateways:
+
+```json
+{
+  "ai": {
+    "enabled": true,
+    "provider": "custom",
+    "api_key": "optional",
+    "model": "your-model",
+    "endpoint": "https://llm.example/v1"
+  }
+}
+```
+
+The remaining optional keys are `max_tokens` (default `400`, clamped to
+`1..=8192`) and `cache_enabled` (default `true`).
+
+### Environment variables and CLI overrides
 
 Environment variables override the file; CLI flags override both:
 
 | Variable | Purpose |
 |----------|---------|
-| `RUSTYDEPS_AI_ENABLED` | `true`/`false` |
-| `RUSTYDEPS_AI_PROVIDER` | `openai`, `gemini`, or `ollama` |
-| `RUSTYDEPS_AI_API_KEY` | API key (falls back to `OPENAI_API_KEY` / `GEMINI_API_KEY`) |
+| `RUSTYDEPS_AI_ENABLED` | `true`/`false`, `1`/`0`, `yes`/`no`, `on`/`off` |
+| `RUSTYDEPS_AI_PROVIDER` | `openai`, `gemini`, `openrouter`, `ollama`, or `custom` |
+| `RUSTYDEPS_AI_API_KEY` | Generic key; when unset, the provider-native variable is used |
 | `RUSTYDEPS_AI_MODEL` | Model name |
-| `RUSTYDEPS_AI_ENDPOINT` | OpenAI-compatible base URL |
+| `RUSTYDEPS_AI_ENDPOINT` | Base URL or full chat-completions URL |
 
-Generated analyses are cached at
-`~/.cache/rustydeps/changelogs/{ecosystem}_{package}_{target_version}.json`.
-Remove that directory to force fresh analyses. If the provider is disabled,
-misconfigured, offline, rate-limited, or slow, the scan still succeeds: the
-drawer links to the package's published versions and omits the AI card.
+Native key fallbacks: `OPENAI_API_KEY`, `GEMINI_API_KEY` (or
+`GOOGLE_API_KEY`), and `OPENROUTER_API_KEY`.
+
+| Flag | Effect |
+|------|--------|
+| `--ai` | Force AI summaries on for this scan |
+| `--no-ai` | Force AI summaries off; wins over `--ai` and the config |
+| `--ai-model <MODEL>` | Override the configured model for this scan |
+
+If a provider call fails, the warning names the resolved request URL, the HTTP
+status, and a compact snippet of the response body, for example
+`request to https://api.openai.com/v1/chat/completions returned HTTP 401:
+{"error": ...}`. That is usually enough to spot a wrong endpoint, key, or model
+name without enabling debug logging.
 
 ## Releasing
 

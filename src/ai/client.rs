@@ -1,19 +1,28 @@
 //! Minimal async client for OpenAI-compatible chat-completions APIs.
 //!
-//! OpenAI, Gemini (through its OpenAI-compatible endpoint), and a local Ollama
-//! server all accept the same request and response shape, so one client covers
-//! every provider. Requests are deliberately non-streaming: the report needs a
-//! finished Markdown summary, not a token stream.
+//! OpenAI, Gemini (through its OpenAI-compatible endpoint), OpenRouter, and a
+//! local Ollama server all accept the same request and response shape, so one
+//! client covers every provider — including a user-supplied OpenAI-compatible
+//! proxy. Requests are deliberately non-streaming: the report needs a finished
+//! Markdown summary, not a token stream.
 
 use std::time::Duration;
 
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
-use crate::config::AiSettings;
+use crate::config::{AiProvider, AiSettings};
 
 /// Per-request timeout. One slow library must not stall the whole scan.
 pub const REQUEST_TIMEOUT: Duration = Duration::from_secs(10);
+
+/// Maximum number of response-body characters kept in an error message.
+pub const ERROR_BODY_LIMIT: usize = 300;
+
+/// Attribution sent to OpenRouter so usage can be identified in its dashboard.
+pub const OPENROUTER_APP_URL: &str = "https://github.com/AlexDevsTheWeb/rustydeps";
+/// Human-readable application name sent to OpenRouter.
+pub const OPENROUTER_APP_TITLE: &str = "RustyDeps";
 
 /// Failures raised while talking to a provider.
 #[derive(Debug, Error)]
@@ -21,15 +30,26 @@ pub enum AiClientError {
     /// The HTTP client could not be constructed.
     #[error("could not build the AI HTTP client: {0}")]
     Build(#[source] reqwest::Error),
+    /// The resolved settings cannot produce a valid request.
+    #[error("invalid AI configuration: {0}")]
+    Configuration(String),
     /// The request failed before a usable response was received.
-    #[error("request to the AI provider failed: {0}")]
-    Transport(#[source] reqwest::Error),
+    #[error("request to {url} failed: {source}")]
+    Transport {
+        /// Resolved chat-completions URL.
+        url: String,
+        /// Underlying transport error.
+        #[source]
+        source: reqwest::Error,
+    },
     /// The provider answered with a non-success status.
-    #[error("AI provider returned HTTP {status}: {body}")]
+    #[error("request to {url} returned HTTP {status}: {body}")]
     Status {
+        /// Resolved chat-completions URL.
+        url: String,
         /// HTTP status code.
         status: u16,
-        /// Short excerpt of the response body.
+        /// Compact excerpt of the response body.
         body: String,
     },
     /// The response was successful but not a usable completion.
@@ -47,6 +67,19 @@ pub struct AiClient {
 impl AiClient {
     /// Build a client for the resolved settings.
     pub fn new(settings: AiSettings) -> Result<Self, AiClientError> {
+        if settings.endpoint.trim().is_empty() {
+            return Err(AiClientError::Configuration(format!(
+                "the {} provider needs an endpoint; set ai.endpoint in the config or RUSTYDEPS_AI_ENDPOINT",
+                settings.provider.label()
+            )));
+        }
+        if settings.model.trim().is_empty() {
+            return Err(AiClientError::Configuration(format!(
+                "the {} provider needs a model; set ai.model in the config or RUSTYDEPS_AI_MODEL",
+                settings.provider.label()
+            )));
+        }
+
         let http = reqwest::Client::builder()
             .timeout(REQUEST_TIMEOUT)
             .user_agent(concat!("rustydeps/", env!("CARGO_PKG_VERSION")))
@@ -57,7 +90,7 @@ impl AiClient {
 
     /// The fully resolved chat-completions URL.
     pub fn endpoint(&self) -> String {
-        chat_endpoint(&self.settings.endpoint)
+        chat_endpoint(self.settings.provider, &self.settings.endpoint)
     }
 
     /// Send a system/user prompt pair and return the completion text.
@@ -79,19 +112,38 @@ impl AiClient {
             stream: false,
         };
 
-        let mut builder = self.http.post(self.endpoint()).json(&request);
+        let url = self.endpoint();
+        let mut builder = self.http.post(&url).json(&request);
         if let Some(api_key) = &self.settings.api_key {
             builder = builder.bearer_auth(api_key);
         }
+        if self.settings.provider == AiProvider::OpenRouter {
+            builder = builder
+                .header("HTTP-Referer", OPENROUTER_APP_URL)
+                .header("X-Title", OPENROUTER_APP_TITLE);
+        }
 
-        let response = builder.send().await.map_err(AiClientError::Transport)?;
+        let response = builder
+            .send()
+            .await
+            .map_err(|source| AiClientError::Transport {
+                url: url.clone(),
+                source,
+            })?;
         let status = response.status();
-        let body = response.text().await.map_err(AiClientError::Transport)?;
+        let body = response
+            .text()
+            .await
+            .map_err(|source| AiClientError::Transport {
+                url: url.clone(),
+                source,
+            })?;
 
         if !status.is_success() {
             return Err(AiClientError::Status {
+                url,
                 status: status.as_u16(),
-                body: truncate(&body, 300),
+                body: snippet(&body, ERROR_BODY_LIMIT),
             });
         }
 
@@ -99,14 +151,64 @@ impl AiClient {
     }
 }
 
-/// Resolve a base URL to the chat-completions endpoint.
-fn chat_endpoint(base: &str) -> String {
-    let base = base.trim_end_matches('/');
-    if base.ends_with("/chat/completions") {
-        base.to_string()
-    } else {
-        format!("{base}/chat/completions")
+/// Resolve a provider base URL to a chat-completions endpoint.
+///
+/// The resolver is deliberately forgiving: it accepts a bare origin
+/// (`https://api.openai.com`), a provider base path (`/v1`, `/v1beta`,
+/// `/v1beta/openai`), a full `/chat/completions` endpoint, trailing slashes, and
+/// an optional query string or fragment. Only path segments are appended; an
+/// existing query is preserved at the end instead of being corrupted.
+fn chat_endpoint(provider: AiProvider, base: &str) -> String {
+    let (address, suffix) = split_suffix(base.trim());
+    let address = address.trim_end_matches('/');
+
+    if address.is_empty() {
+        return format!("{}{suffix}", provider.default_endpoint());
     }
+
+    let endpoint = if address.ends_with("/chat/completions") {
+        address.to_string()
+    } else {
+        format!("{address}{}", completion_path(provider, address))
+    };
+
+    format!("{endpoint}{suffix}")
+}
+
+/// Split an optional `?query` or `#fragment` from the URL path.
+fn split_suffix(value: &str) -> (&str, &str) {
+    match value.find(['?', '#']) {
+        Some(index) => (&value[..index], &value[index..]),
+        None => (value, ""),
+    }
+}
+
+/// Whether the URL already contains a path after its authority.
+fn has_path(address: &str) -> bool {
+    match address.split_once("://") {
+        Some((_, rest)) => rest.contains('/'),
+        None => address.contains('/'),
+    }
+}
+
+/// Path to append to a base URL that does not yet name the completion endpoint.
+fn completion_path(provider: AiProvider, address: &str) -> &'static str {
+    if !has_path(address) {
+        return match provider {
+            AiProvider::Openai | AiProvider::Ollama => "/v1/chat/completions",
+            AiProvider::Gemini => "/v1beta/openai/chat/completions",
+            AiProvider::OpenRouter => "/api/v1/chat/completions",
+            AiProvider::Custom => "/chat/completions",
+        };
+    }
+
+    // Google documents both the bare v1beta root and its OpenAI-compatible
+    // sub-path; accept the former instead of producing a 404.
+    if provider == AiProvider::Gemini && address.ends_with("/v1beta") {
+        return "/openai/chat/completions";
+    }
+
+    "/chat/completions"
 }
 
 /// Parse a standard chat-completions response body.
@@ -125,9 +227,20 @@ fn parse_chat_response(body: &str) -> Result<String, AiClientError> {
     Ok(content.to_string())
 }
 
-/// Keep an error excerpt short and character-safe.
-fn truncate(text: &str, limit: usize) -> String {
-    text.chars().take(limit).collect()
+/// Keep an error excerpt short, single-line, and character-safe.
+fn snippet(text: &str, limit: usize) -> String {
+    let collapsed = text.split_whitespace().collect::<Vec<_>>().join(" ");
+    if collapsed.is_empty() {
+        return "<empty response body>".to_string();
+    }
+
+    let mut chars = collapsed.chars();
+    let excerpt: String = chars.by_ref().take(limit).collect();
+    if chars.next().is_some() {
+        format!("{excerpt}…")
+    } else {
+        excerpt
+    }
 }
 
 #[derive(Serialize)]
@@ -165,20 +278,230 @@ struct ChatMessageContent {
 mod tests {
     use super::*;
 
-    #[test]
-    fn resolves_base_urls_and_full_endpoints() {
+    fn settings(provider: AiProvider, endpoint: &str, model: &str) -> AiSettings {
+        AiSettings {
+            enabled: true,
+            provider,
+            api_key: None,
+            model: model.to_string(),
+            endpoint: endpoint.to_string(),
+            max_tokens: 400,
+            cache_enabled: false,
+        }
+    }
+
+    fn resolve(provider: AiProvider, base: &str) -> String {
+        AiClient::new(settings(provider, base, "test-model"))
+            .expect("client")
+            .endpoint()
+    }
+
+    /// Serve exactly one HTTP request and return the server root plus the raw
+    /// request text, so tests can assert on the path and headers without a
+    /// network dependency.
+    async fn serve_once(response: String) -> (String, tokio::sync::oneshot::Receiver<String>) {
+        use tokio::io::{AsyncReadExt, AsyncWriteExt};
+
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0")
+            .await
+            .expect("bind");
+        let address = listener.local_addr().expect("address");
+        let (sender, receiver) = tokio::sync::oneshot::channel();
+
+        tokio::spawn(async move {
+            let (mut socket, _) = listener.accept().await.expect("accept");
+            let mut buffer = vec![0u8; 8192];
+            let read = socket.read(&mut buffer).await.expect("read request");
+            let _ = sender.send(String::from_utf8_lossy(&buffer[..read]).to_string());
+            socket
+                .write_all(response.as_bytes())
+                .await
+                .expect("write response");
+            let _ = socket.shutdown().await;
+        });
+
+        (format!("http://{address}"), receiver)
+    }
+
+    fn http_response(status: &str, body: &str) -> String {
+        format!(
+            "HTTP/1.1 {status}\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}",
+            body.len()
+        )
+    }
+
+    #[tokio::test]
+    async fn http_errors_name_the_url_status_and_body() {
+        let body = r#"{"error":{"message":"bad key"}}"#;
+        let (root, _) = serve_once(http_response("401 Unauthorized", body)).await;
+        let client = AiClient::new(settings(
+            AiProvider::Custom,
+            &format!("{root}/v1"),
+            "test-model",
+        ))
+        .expect("client");
+
+        let error = client
+            .complete("system", "user")
+            .await
+            .expect_err("status error");
+        let rendered = error.to_string();
+
+        assert!(rendered.contains(&format!("{root}/v1/chat/completions")));
+        assert!(rendered.contains("HTTP 401"));
+        assert!(rendered.contains("bad key"));
+    }
+
+    #[tokio::test]
+    async fn openrouter_requests_carry_attribution_headers() {
+        let body = r#"{"choices":[{"message":{"role":"assistant","content":"ok"}}]}"#;
+        let (root, request) = serve_once(http_response("200 OK", body)).await;
+        let client = AiClient::new(settings(
+            AiProvider::OpenRouter,
+            &format!("{root}/api/v1"),
+            "test-model",
+        ))
+        .expect("client");
+
         assert_eq!(
-            chat_endpoint("https://api.openai.com/v1"),
+            client.complete("system", "user").await.expect("completion"),
+            "ok"
+        );
+
+        let request = request.await.expect("request");
+        let lower = request.to_ascii_lowercase();
+        assert!(request.starts_with("POST /api/v1/chat/completions HTTP/1.1"));
+        assert!(lower.contains(&format!(
+            "http-referer: {}",
+            OPENROUTER_APP_URL.to_ascii_lowercase()
+        )));
+        assert!(lower.contains(&format!(
+            "x-title: {}",
+            OPENROUTER_APP_TITLE.to_ascii_lowercase()
+        )));
+    }
+
+    #[test]
+    fn resolves_every_provider_from_its_base_url() {
+        assert_eq!(
+            resolve(AiProvider::Openai, "https://api.openai.com/v1"),
             "https://api.openai.com/v1/chat/completions"
         );
         assert_eq!(
-            chat_endpoint("http://localhost:11434/v1/"),
+            resolve(
+                AiProvider::Gemini,
+                "https://generativelanguage.googleapis.com/v1beta/openai"
+            ),
+            "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions"
+        );
+        assert_eq!(
+            resolve(AiProvider::OpenRouter, "https://openrouter.ai/api/v1"),
+            "https://openrouter.ai/api/v1/chat/completions"
+        );
+        assert_eq!(
+            resolve(AiProvider::Ollama, "http://localhost:11434/v1"),
             "http://localhost:11434/v1/chat/completions"
         );
         assert_eq!(
-            chat_endpoint("https://example.test/v1/chat/completions"),
-            "https://example.test/v1/chat/completions"
+            resolve(AiProvider::Custom, "https://llm.example/v1"),
+            "https://llm.example/v1/chat/completions"
         );
+    }
+
+    #[test]
+    fn completes_bare_origins_with_the_provider_root() {
+        assert_eq!(
+            resolve(AiProvider::Openai, "https://api.openai.com"),
+            "https://api.openai.com/v1/chat/completions"
+        );
+        assert_eq!(
+            resolve(
+                AiProvider::Gemini,
+                "https://generativelanguage.googleapis.com"
+            ),
+            "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions"
+        );
+        assert_eq!(
+            resolve(AiProvider::OpenRouter, "https://openrouter.ai"),
+            "https://openrouter.ai/api/v1/chat/completions"
+        );
+        assert_eq!(
+            resolve(AiProvider::Ollama, "http://localhost:11434"),
+            "http://localhost:11434/v1/chat/completions"
+        );
+        assert_eq!(
+            resolve(AiProvider::Custom, "https://llm.example"),
+            "https://llm.example/chat/completions"
+        );
+    }
+
+    #[test]
+    fn accepts_gemini_roots_trailing_slashes_and_full_endpoints() {
+        assert_eq!(
+            resolve(
+                AiProvider::Gemini,
+                "https://generativelanguage.googleapis.com/v1beta"
+            ),
+            "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions"
+        );
+        assert_eq!(
+            resolve(
+                AiProvider::Gemini,
+                "https://generativelanguage.googleapis.com/v1beta/openai/"
+            ),
+            "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions"
+        );
+        assert_eq!(
+            resolve(
+                AiProvider::Openai,
+                "https://api.openai.com/v1/chat/completions/"
+            ),
+            "https://api.openai.com/v1/chat/completions"
+        );
+        assert_eq!(
+            resolve(
+                AiProvider::Custom,
+                "  https://proxy.example/v1/chat/completions/  "
+            ),
+            "https://proxy.example/v1/chat/completions"
+        );
+    }
+
+    #[test]
+    fn preserves_query_strings_and_fragments() {
+        assert_eq!(
+            resolve(AiProvider::Openai, "https://api.openai.com/v1?key=abc"),
+            "https://api.openai.com/v1/chat/completions?key=abc"
+        );
+        assert_eq!(
+            resolve(
+                AiProvider::Custom,
+                "https://proxy.example/v1/chat/completions?key=abc"
+            ),
+            "https://proxy.example/v1/chat/completions?key=abc"
+        );
+    }
+
+    #[test]
+    fn rejects_a_custom_provider_without_endpoint_or_model() {
+        assert!(matches!(
+            AiClient::new(settings(AiProvider::Custom, "", "my-model")),
+            Err(AiClientError::Configuration(_))
+        ));
+        assert!(matches!(
+            AiClient::new(settings(AiProvider::Custom, "https://llm.example/v1", "")),
+            Err(AiClientError::Configuration(_))
+        ));
+    }
+
+    #[test]
+    fn error_snippets_are_compact_and_character_safe() {
+        assert_eq!(
+            snippet("  rate\n\tlimited  ", ERROR_BODY_LIMIT),
+            "rate limited"
+        );
+        assert_eq!(snippet(" \n\t ", ERROR_BODY_LIMIT), "<empty response body>");
+        assert_eq!(snippet("aébc", 3), "aéb…");
     }
 
     #[test]
@@ -209,10 +532,5 @@ mod tests {
             parse_chat_response("not json"),
             Err(AiClientError::Response(_))
         ));
-    }
-
-    #[test]
-    fn truncation_is_character_safe() {
-        assert_eq!(truncate("aébc", 3), "aéb");
     }
 }
