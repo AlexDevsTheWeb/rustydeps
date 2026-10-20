@@ -181,7 +181,7 @@ on disk.
   package version makes no request and costs no tokens — delete the directory to
   force fresh analyses.
 - **Request scope:** only outdated, registry-resolved packages are analyzed, at
-  most four concurrently, with a 10-second timeout per request. The generated
+  most four concurrently, with a 45-second timeout per request. The generated
   Markdown appears in the package drawer; every failure degrades gracefully to
   the standard changelog link.
 
@@ -190,7 +190,7 @@ on disk.
 | Provider | `provider` value | Default endpoint | Default model | API key |
 |----------|------------------|------------------|---------------|---------|
 | OpenAI | `openai` | `https://api.openai.com/v1` | `gpt-4o-mini` | Required |
-| Google Gemini (AI Studio) | `gemini` / `google` | `https://generativelanguage.googleapis.com/v1beta/openai` | `gemini-2.5-flash` | Required |
+| Google Gemini (AI Studio) | `gemini` / `google` | `https://generativelanguage.googleapis.com/v1beta/openai` | `gemini-3.5-flash` | Required |
 | OpenRouter | `openrouter` | `https://openrouter.ai/api/v1` | `google/gemini-2.5-flash` | Required |
 | Ollama | `ollama` | `http://localhost:11434/v1` | `llama3.1` | Not required |
 | Custom OpenAI-compatible proxy | `custom` / `openai-compatible` | Your URL | Your model | Optional |
@@ -215,10 +215,16 @@ Save one of these as `~/.config/rustydeps/config.json` (or as
     "enabled": true,
     "provider": "gemini",
     "api_key": "AIza...",
-    "model": "gemini-2.5-flash"
+    "model": "gemini-3.5-flash"
   }
 }
 ```
+
+> Gemini retires model IDs over time. A `404 ... model ... is not found` warning
+> means the configured `model` is no longer served by your account; set
+> `ai.model` (or `--ai-model`) to a current ID. Gemini 3 thinking models are
+> called with `reasoning_effort: "none"` so the 400-token summary budget is not
+> consumed by hidden reasoning; lite variants are called without that field.
 
 **OpenAI** — create a key at <https://platform.openai.com/api-keys>:
 

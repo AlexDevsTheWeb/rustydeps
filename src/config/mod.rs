@@ -74,7 +74,7 @@ impl AiProvider {
     pub fn default_model(self) -> &'static str {
         match self {
             Self::Openai => "gpt-4o-mini",
-            Self::Gemini => "gemini-2.5-flash",
+            Self::Gemini => "gemini-3.5-flash",
             Self::OpenRouter => "google/gemini-2.5-flash",
             Self::Ollama => "llama3.1",
             Self::Custom => "",
@@ -543,7 +543,7 @@ mod tests {
             AiProvider::Openai.default_endpoint(),
             "https://api.openai.com/v1"
         );
-        assert_eq!(AiProvider::Gemini.default_model(), "gemini-2.5-flash");
+        assert_eq!(AiProvider::Gemini.default_model(), "gemini-3.5-flash");
         assert_eq!(
             AiProvider::Gemini.default_endpoint(),
             "https://generativelanguage.googleapis.com/v1beta/openai"

@@ -56,7 +56,7 @@ The effective configuration is layered, most specific first:
 - `provider` is `openai`, `gemini`, `openrouter`, `ollama`, or `custom`
   (`google` aliases `gemini`; `openai-compatible`/`proxy` alias `custom`).
 - Defaults: OpenAI `gpt-4o-mini` at `https://api.openai.com/v1`; Gemini
-  `gemini-2.5-flash` at Google's OpenAI-compatible
+  `gemini-3.5-flash` at Google's OpenAI-compatible
   `https://generativelanguage.googleapis.com/v1beta/openai`; OpenRouter
   `google/gemini-2.5-flash` at `https://openrouter.ai/api/v1`; Ollama `llama3.1`
   at `http://localhost:11434/v1` (no API key). A `custom` proxy has no defaults
@@ -93,10 +93,13 @@ explicitly forbids inventing CVEs or changelog entries.
 
 `src/ai/client.rs` is one OpenAI-compatible `reqwest` client for every
 provider. It posts to `{endpoint}/chat/completions`, adds a bearer token when a
-key exists, sends non-streaming `system`/`user` messages, and applies a 10-second
-per-request timeout. Provider-aware URL normalization, OpenRouter attribution
-headers, and URL-rich HTTP diagnostics are documented in
-[[ai-provider-compat]]. Only the first choice's text is used.
+key exists, sends non-streaming `system`/`user` messages, and applies a
+45-second per-request timeout. Gemini thinking models are asked for
+`reasoning_effort: "none"` so hidden reasoning cannot consume the summary
+budget; a `400 invalid argument` retries once without the field. Provider-aware
+URL normalization, OpenRouter attribution headers, and URL-rich HTTP
+diagnostics are documented in [[ai-provider-compat]]. Only the first choice's
+text is used.
 
 ## Cache
 

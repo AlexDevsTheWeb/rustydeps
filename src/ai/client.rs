@@ -10,11 +10,13 @@ use std::time::Duration;
 
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
+use tracing::debug;
 
 use crate::config::{AiProvider, AiSettings};
 
-/// Per-request timeout. One slow library must not stall the whole scan.
-pub const REQUEST_TIMEOUT: Duration = Duration::from_secs(10);
+/// Per-request timeout. One slow library must not stall the whole scan, but a
+/// reasoning model can take tens of seconds to produce a summary.
+pub const REQUEST_TIMEOUT: Duration = Duration::from_secs(45);
 
 /// Maximum number of response-body characters kept in an error message.
 pub const ERROR_BODY_LIMIT: usize = 300;
@@ -95,7 +97,7 @@ impl AiClient {
 
     /// Send a system/user prompt pair and return the completion text.
     pub async fn complete(&self, system: &str, user: &str) -> Result<String, AiClientError> {
-        let request = ChatRequest {
+        let mut request = ChatRequest {
             model: &self.settings.model,
             messages: vec![
                 ChatMessage {
@@ -110,10 +112,44 @@ impl AiClient {
             max_tokens: self.settings.max_tokens,
             temperature: 0.2,
             stream: false,
+            reasoning_effort: reasoning_effort_for(self.settings.provider, &self.settings.model),
         };
 
         let url = self.endpoint();
-        let mut builder = self.http.post(&url).json(&request);
+        let (mut status, mut body) = self.post(&url, &request).await?;
+
+        // Lite and older Gemini variants reject `reasoning_effort`; retry once
+        // without it so an explicit model override keeps working.
+        if status == reqwest::StatusCode::BAD_REQUEST
+            && request.reasoning_effort.is_some()
+            && body.to_ascii_lowercase().contains("invalid argument")
+        {
+            debug!(
+                provider = self.settings.provider.label(),
+                "provider rejected reasoning_effort; retrying without it"
+            );
+            request.reasoning_effort = None;
+            (status, body) = self.post(&url, &request).await?;
+        }
+
+        if !status.is_success() {
+            return Err(AiClientError::Status {
+                url,
+                status: status.as_u16(),
+                body: snippet(&body, ERROR_BODY_LIMIT),
+            });
+        }
+
+        parse_chat_response(&body)
+    }
+
+    /// POST one chat-completions request and return its status and raw body.
+    async fn post(
+        &self,
+        url: &str,
+        request: &ChatRequest<'_>,
+    ) -> Result<(reqwest::StatusCode, String), AiClientError> {
+        let mut builder = self.http.post(url).json(request);
         if let Some(api_key) = &self.settings.api_key {
             builder = builder.bearer_auth(api_key);
         }
@@ -127,7 +163,7 @@ impl AiClient {
             .send()
             .await
             .map_err(|source| AiClientError::Transport {
-                url: url.clone(),
+                url: url.to_string(),
                 source,
             })?;
         let status = response.status();
@@ -135,20 +171,23 @@ impl AiClient {
             .text()
             .await
             .map_err(|source| AiClientError::Transport {
-                url: url.clone(),
+                url: url.to_string(),
                 source,
             })?;
-
-        if !status.is_success() {
-            return Err(AiClientError::Status {
-                url,
-                status: status.as_u16(),
-                body: snippet(&body, ERROR_BODY_LIMIT),
-            });
-        }
-
-        parse_chat_response(&body)
+        Ok((status, body))
     }
+}
+
+/// Disable hidden reasoning for Gemini thinking models.
+///
+/// Gemini 3 charges its internal reasoning against `max_tokens` before emitting
+/// any text, so the 400-token summary budget can be consumed with an empty or
+/// truncated answer. `reasoning_effort = "none"` keeps the whole budget for the
+/// visible summary. Lite variants do not accept the field and are left alone.
+fn reasoning_effort_for(provider: AiProvider, model: &str) -> Option<&'static str> {
+    let is_gemini_thinking =
+        provider == AiProvider::Gemini && !model.to_ascii_lowercase().contains("lite");
+    is_gemini_thinking.then_some("none")
 }
 
 /// Resolve a provider base URL to a chat-completions endpoint.
@@ -250,6 +289,8 @@ struct ChatRequest<'a> {
     max_tokens: u32,
     temperature: f32,
     stream: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    reasoning_effort: Option<&'a str>,
 }
 
 #[derive(Serialize)]
@@ -300,24 +341,41 @@ mod tests {
     /// request text, so tests can assert on the path and headers without a
     /// network dependency.
     async fn serve_once(response: String) -> (String, tokio::sync::oneshot::Receiver<String>) {
+        let (root, mut requests) = serve_sequence(vec![response]).await;
+        let (sender, receiver) = tokio::sync::oneshot::channel();
+        tokio::spawn(async move {
+            if let Some(request) = requests.recv().await {
+                let _ = sender.send(request);
+            }
+        });
+        (root, receiver)
+    }
+
+    /// Serve one HTTP request per response, in order, and stream the raw
+    /// requests back to the test.
+    async fn serve_sequence(
+        responses: Vec<String>,
+    ) -> (String, tokio::sync::mpsc::UnboundedReceiver<String>) {
         use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
         let listener = tokio::net::TcpListener::bind("127.0.0.1:0")
             .await
             .expect("bind");
         let address = listener.local_addr().expect("address");
-        let (sender, receiver) = tokio::sync::oneshot::channel();
+        let (sender, receiver) = tokio::sync::mpsc::unbounded_channel();
 
         tokio::spawn(async move {
-            let (mut socket, _) = listener.accept().await.expect("accept");
-            let mut buffer = vec![0u8; 8192];
-            let read = socket.read(&mut buffer).await.expect("read request");
-            let _ = sender.send(String::from_utf8_lossy(&buffer[..read]).to_string());
-            socket
-                .write_all(response.as_bytes())
-                .await
-                .expect("write response");
-            let _ = socket.shutdown().await;
+            for response in responses {
+                let (mut socket, _) = listener.accept().await.expect("accept");
+                let mut buffer = vec![0u8; 8192];
+                let read = socket.read(&mut buffer).await.expect("read request");
+                let _ = sender.send(String::from_utf8_lossy(&buffer[..read]).to_string());
+                socket
+                    .write_all(response.as_bytes())
+                    .await
+                    .expect("write response");
+                let _ = socket.shutdown().await;
+            }
         });
 
         (format!("http://{address}"), receiver)
@@ -379,6 +437,49 @@ mod tests {
             "x-title: {}",
             OPENROUTER_APP_TITLE.to_ascii_lowercase()
         )));
+    }
+
+    #[tokio::test]
+    async fn retries_without_reasoning_effort_when_the_provider_rejects_it() {
+        let error = r#"{"error":{"message":"Request contains an invalid argument."}}"#;
+        let success = r#"{"choices":[{"message":{"role":"assistant","content":"ok"}}]}"#;
+        let (root, mut requests) = serve_sequence(vec![
+            http_response("400 Bad Request", error),
+            http_response("200 OK", success),
+        ])
+        .await;
+        let client =
+            AiClient::new(settings(AiProvider::Gemini, &root, "gemini-3.5-flash")).expect("client");
+
+        assert_eq!(
+            client.complete("system", "user").await.expect("completion"),
+            "ok"
+        );
+
+        let first = requests.recv().await.expect("first request");
+        let second = requests.recv().await.expect("retry");
+        assert!(first.contains("\"reasoning_effort\":\"none\""));
+        assert!(!second.contains("reasoning_effort"));
+    }
+
+    #[test]
+    fn only_gemini_thinking_models_disable_reasoning() {
+        assert_eq!(
+            reasoning_effort_for(AiProvider::Gemini, "gemini-3.5-flash"),
+            Some("none")
+        );
+        assert_eq!(
+            reasoning_effort_for(AiProvider::Gemini, "gemini-3.5-flash-lite"),
+            None
+        );
+        assert_eq!(
+            reasoning_effort_for(AiProvider::Openai, "gpt-4o-mini"),
+            None
+        );
+        assert_eq!(
+            reasoning_effort_for(AiProvider::OpenRouter, "google/gemini-3.5-flash"),
+            None
+        );
     }
 
     #[test]

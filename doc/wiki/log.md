@@ -595,6 +595,33 @@ implementation report's MR section.
 
 Validation: OKF validator PASSED (0 errors, 0 warnings).
 
+## 2026-10-20 — Gemini AI failure fix (retired model, reasoning budget, timeout)
+
+Diagnosed the reported "console errors and no AI sections" against the live
+Gemini endpoint. The configured `gemini-1.5-flash-latest` returned HTTP 404
+(`is not found for API version v1main`); the key and endpoint were valid. Two
+latent defaults compounded the failure: `gemini-2.5-flash` is no longer served
+to new accounts, and the 10-second timeout cut off real reasoning-model
+responses.
+
+- `src/config/mod.rs` — Gemini default model is now `gemini-3.5-flash`; the
+  provider-defaults test was updated.
+- `src/ai/client.rs` — request timeout raised to 45 seconds; Gemini thinking
+  models send `reasoning_effort: "none"` so hidden reasoning no longer consumes
+  the 400-token summary budget; a `400 invalid argument` retries once without
+  the field so lite/older variants keep working. Added a socket-level retry test
+  and a helper test for the model gate.
+- `README.md`, [[architecture]], [[ai-provider-compat]], and
+  [[ai-changelog-summarizer]] — current defaults, timeout, diagnostics hint for
+  retired model IDs, and the reasoning rule.
+- Repaired the local `~/.config/rustydeps/config.json` model (backup written
+  beside it). End-to-end scan: 3/3 packages analyzed, no warnings; repeat scan
+  served 3/3 from the cache.
+
+Validation: `cargo fmt --all`; `cargo test` 132 passed; `cargo clippy
+--all-targets -- -D warnings` clean; live scan produced AI cards for every
+outdated package. OKF validator result recorded in the development report.
+
 
 
 

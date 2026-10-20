@@ -198,7 +198,7 @@ defaults. Malformed files or values disable AI for the run instead of failing
 the scan.
 
 `AiProvider` covers OpenAI (`gpt-4o-mini` at `https://api.openai.com/v1`), Gemini
-(`gemini-2.5-flash` at the OpenAI-compatible
+(`gemini-3.5-flash` at the OpenAI-compatible
 `https://generativelanguage.googleapis.com/v1beta/openai`), OpenRouter
 (`google/gemini-2.5-flash` at `https://openrouter.ai/api/v1`), Ollama
 (`llama3.1` at `http://localhost:11434/v1`, no key), and a custom proxy that

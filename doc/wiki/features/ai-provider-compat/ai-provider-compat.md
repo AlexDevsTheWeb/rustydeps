@@ -32,7 +32,7 @@ chat-completions protocol; the variant selects defaults and header behaviour.
 | Provider | Label | Default endpoint | Default model | API key |
 |----------|-------|------------------|---------------|---------|
 | OpenAI | `openai` | `https://api.openai.com/v1` | `gpt-4o-mini` | Required |
-| Gemini | `gemini` | `https://generativelanguage.googleapis.com/v1beta/openai` | `gemini-2.5-flash` | Required |
+| Gemini | `gemini` | `https://generativelanguage.googleapis.com/v1beta/openai` | `gemini-3.5-flash` | Required |
 | OpenRouter | `openrouter` | `https://openrouter.ai/api/v1` | `google/gemini-2.5-flash` | Required |
 | Ollama | `ollama` | `http://localhost:11434/v1` | `llama3.1` | Not required |
 | Custom proxy | `custom` | none (user-supplied) | none (user-supplied) | Optional |
@@ -80,6 +80,13 @@ OpenRouter requests additionally send `HTTP-Referer`
 attributed in its dashboard. Bearer authentication is applied whenever a key is
 present.
 
+Gemini thinking models (`gemini-3*`, excluding `-lite`) receive
+`reasoning_effort: "none"`: Google charges hidden reasoning against
+`max_tokens`, so the 400-token summary budget could otherwise be spent before
+any visible text. Lite and older variants reject that field; when a provider
+answers `400` with `invalid argument`, the client retries once without it. The
+request timeout is 45 seconds, reflecting real reasoning-model latency.
+
 ## Diagnostics
 
 Non-success responses now produce an error that names the resolved URL, the HTTP
@@ -122,8 +129,9 @@ Covered by unit tests in `src/config/mod.rs` and `src/ai/client.rs`:
 - query strings and fragments survive resolution unchanged;
 - a custom provider without an endpoint or model is rejected;
 - error excerpts are single-line, bounded, and character-safe;
-- two socket-based tests exercise a real request: error diagnostics carry the
-  resolved URL/status/body, and OpenRouter sends its attribution headers.
+- socket-based tests exercise real requests: error diagnostics carry the
+  resolved URL/status/body, OpenRouter sends its attribution headers, and a `400
+  invalid argument` retries once without `reasoning_effort`.
 
 The repository gates (`cargo fmt`, clippy with `-D warnings`, tests, release
 build) are recorded in the [implementation report](implementation-report.md).
