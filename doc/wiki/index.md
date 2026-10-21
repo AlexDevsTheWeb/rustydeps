@@ -3,7 +3,7 @@ title: "RustyDeps Wiki — Index"
 type: index
 description: "Entrypoint and knowledge-graph map for the RustyDeps LLM-Wiki."
 status: active
-version: 0.3.0
+version: 0.3.1
 license: CC-BY-4.0
 created: 2026-10-14
 updated: 2026-10-21
@@ -46,6 +46,7 @@ and produces an interactive HTML report with optional AI changelog summaries.
 | [[ai-changelog-summarizer]] | Milestone 0.3.0 per-library AI briefings: layered BYOK JSON config, OpenAI/Gemini/Ollama client, per-version disk cache, graceful fallback, and the report AI card; [implementation report](features/ai-changelog-summarizer/implementation-report.md). |
 | [[ai-provider-compat]] | Provider-aware URL resolution for OpenAI, Gemini, OpenRouter, Ollama, and custom proxies; OpenRouter headers, request diagnostics with URL/status/body, and the full README BYOK guide; [implementation report](features/ai-provider-compat/implementation-report.md). |
 | [[free-local-ai]] | Quota-free Ollama summaries, `--ai-provider`/`--ai-endpoint`, upgrade-only AI requests, a fatal-error circuit breaker, and report drawers that omit the unavailable notice on up-to-date packages; [implementation report](features/free-local-ai/implementation-report.md). |
+| [[v0.3.1-surgical-fixes]] | `cache clear` and `--no-cache`, the 1-second Ollama preflight, cached-model report badges, and wiremock integration tests; [implementation report](features/v0.3.1-surgical-fixes/implementation-report.md). |
 
 ## Source documents
 
@@ -81,6 +82,9 @@ and produces an interactive HTML report with optional AI changelog summaries.
 - `doc/raw/2026-10-20/2026-10-20-fix.md` — provider compatibility, URL
   resolution, HTTP diagnostics, and README BYOK brief implemented by
   [[ai-provider-compat]].
+- `doc/raw/2026-10-21/2026-10-21-0.3.1.md` — v0.3.1 cache, Ollama preflight,
+  report-badge, and integration-test brief implemented by
+  [[v0.3.1-surgical-fixes]].
 
 ## Conventions
 

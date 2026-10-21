@@ -5,17 +5,6 @@
 //! update, attaches a summary, and renders a self-contained HTML report (or
 //! JSON).
 
-mod ai;
-mod classifier;
-mod cli;
-mod config;
-mod model;
-mod parser;
-mod progress;
-mod registry;
-mod report;
-mod scanner;
-
 use std::collections::{BTreeSet, HashMap};
 use std::path::Path;
 use std::time::Instant;
@@ -25,19 +14,23 @@ use clap::Parser;
 use colored::Colorize;
 use tracing::{info, warn};
 
-use crate::ai::Summarizer;
-use crate::classifier::{classify, ClassifiedDependency};
-use crate::cli::{Cli, Command, OutputFormat, ScanArgs};
-use crate::config::AiOverrides;
-use crate::model::{Ecosystem, UpdateType};
-use crate::parser::{parse_manifests, ParsedDependency};
-use crate::registry::composer::ComposerClient;
-use crate::registry::crates_io::CratesIoClient;
-use crate::registry::go::GoRegistryClient;
-use crate::registry::npm::NpmRegistryClient;
-use crate::registry::pypi::PypiClient;
-use crate::registry::{fetch_latest_versions, RegistryClient, RegistryError, DEFAULT_CONCURRENCY};
-use crate::report::{ReportData, ReportMeta};
+use rustydeps::ai::cache::SummaryCache;
+use rustydeps::ai::Summarizer;
+use rustydeps::classifier::{classify, ClassifiedDependency};
+use rustydeps::cli::{CacheCommand, Cli, Command, OutputFormat, ScanArgs};
+use rustydeps::config::AiOverrides;
+use rustydeps::model::{Ecosystem, UpdateType};
+use rustydeps::parser::{parse_manifests, ParsedDependency};
+use rustydeps::registry::composer::ComposerClient;
+use rustydeps::registry::crates_io::CratesIoClient;
+use rustydeps::registry::go::GoRegistryClient;
+use rustydeps::registry::npm::NpmRegistryClient;
+use rustydeps::registry::pypi::PypiClient;
+use rustydeps::registry::{
+    fetch_latest_versions, RegistryClient, RegistryError, DEFAULT_CONCURRENCY,
+};
+use rustydeps::report::{ReportData, ReportMeta};
+use rustydeps::{parser, progress, scanner};
 
 /// Map of `(ecosystem, package)` to `(resolved latest version, error message)`.
 type VersionLookups = HashMap<(Ecosystem, String), (Option<String>, Option<String>)>;
@@ -60,6 +53,7 @@ async fn main() -> Result<()> {
 
     match cli.command {
         Command::Scan(args) => run_scan(args, progress).await,
+        Command::Cache(args) => run_cache(args.action),
     }
 }
 
@@ -85,7 +79,25 @@ fn init_tracing(verbose: bool, writer: progress::ProgressWriter) {
 fn verbose_requested(cli: &Cli) -> bool {
     match &cli.command {
         Command::Scan(args) => args.verbose,
+        Command::Cache(_) => false,
     }
+}
+
+/// Run the `cache` subcommand.
+fn run_cache(action: CacheCommand) -> Result<()> {
+    match action {
+        CacheCommand::Clear => {
+            let cleared = SummaryCache::new(true)
+                .clear()
+                .context("failed to clear the AI summary cache")?;
+            println!(
+                "{} Cleared {} cached AI changelog entries.",
+                "✔".green(),
+                cleared
+            );
+        }
+    }
+    Ok(())
 }
 
 /// Print the ASCII banner: Rust-orange logo, cyan version badge, light-grey
@@ -168,6 +180,7 @@ async fn run_scan(args: ScanArgs, progress: progress::ScanProgress) -> Result<()
         model: args.ai_model.clone(),
         provider: args.ai_provider,
         endpoint: args.ai_endpoint.clone(),
+        no_cache: args.no_cache,
     });
     let mut classified = classify_all(&dependencies, &lookups);
 

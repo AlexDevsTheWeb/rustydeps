@@ -653,3 +653,38 @@ Validation: `cargo test --all-targets` 137 passed; `cargo clippy --all-targets
 -- -D warnings` clean; live scan of `~/CODE/CES/babette` produced 21 analyses
 (14 cached, 7 fresh from Ollama), 16 status cards, 0 unavailable notices, and no
 quota warnings. OKF validation recorded in the development report.
+## 2026-10-21 — v0.3.1 cache management, Ollama preflight, and model badges
+
+Applied `doc/raw/2026-10-21/2026-10-21-0.3.1.md` on
+`feat/v0.3.1-surgical-fixes`.
+
+- `src/lib.rs`/`src/main.rs` — added a library target so integration tests use
+  the public API; the binary is now a thin consumer.
+- `src/cli.rs`, `src/main.rs` — `cache clear` subcommand and `--no-cache` scan
+  flag; the command prints `✔ Cleared X cached AI changelog entries.`
+- `src/ai/cache.rs` — `SummaryCache::clear()` with missing-directory tolerance
+  and count; temp-root tests.
+- `src/config/mod.rs` — `AiOverrides::no_cache` disables both cache reads and
+  writes for one scan.
+- `src/ai/client.rs`, `src/ai/summary.rs` — one-second Ollama `/api/tags`
+  preflight; an offline daemon logs one actionable warning, trips the breaker,
+  and skips every chat request while cache hits still apply.
+- `src/classifier/mod.rs`, `src/report/`, `templates/report.html` — `ai_model`
+  provenance and `⚡ Cached (<model>)` badge.
+- `tests/ai_integration_tests.rs`, `Cargo.toml` — `wiremock = "0.6"`; 200 parse,
+  429 breaker, 404 fatal, and offline-Ollama cases.
+- `README.md`, [[architecture]], and new [[v0.3.1-surgical-fixes]] pages.
+
+Validation: `cargo fmt --all --check` clean; `cargo clippy --all-targets --
+-D warnings` clean; `cargo test --all-targets` 144 unit + 4 integration passed;
+`cargo build --release` success; isolated `cache clear` removed two seeded
+entries; `scan ~/CODE/CES/babette --no-cache` regenerated 21 analyses with 0
+cache hits. OKF validation recorded in the development report.
+
+## 2026-10-21 — v0.3.1 draft PR opened
+
+Opened draft PR [#31](https://github.com/AlexDevsTheWeb/rustydeps/pull/31)
+(`feat/v0.3.1-surgical-fixes` → `development`) and recorded the link in the
+implementation report's MR section.
+
+Validation: OKF validator PASSED (0 errors, 0 warnings).
