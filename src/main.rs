@@ -166,6 +166,8 @@ async fn run_scan(args: ScanArgs, progress: progress::ScanProgress) -> Result<()
         enable: args.ai,
         disable: args.no_ai,
         model: args.ai_model.clone(),
+        provider: args.ai_provider,
+        endpoint: args.ai_endpoint.clone(),
     });
     let mut classified = classify_all(&dependencies, &lookups);
 
@@ -184,6 +186,7 @@ async fn run_scan(args: ScanArgs, progress: progress::ScanProgress) -> Result<()
 
             let meta = ReportMeta {
                 scan_duration_ms: Some(duration_ms),
+                ai_enabled: summarizer.is_enabled(),
             };
             let report = ReportData::from_classified(&classified, &meta);
             let html = report

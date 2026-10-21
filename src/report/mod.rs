@@ -27,6 +27,8 @@ use crate::model::{Ecosystem, UpdateType};
 pub struct ReportMeta {
     /// Wall-clock duration of the scan and registry lookups, in milliseconds.
     pub scan_duration_ms: Option<u128>,
+    /// Whether per-library AI analysis ran for this scan.
+    pub ai_enabled: bool,
 }
 
 /// One dependency row in the report.
@@ -53,6 +55,10 @@ pub struct DependencyReport {
     pub has_insight: bool,
     /// Whether the row carries a full AI analysis in its drawer.
     pub has_ai_analysis: bool,
+    /// Whether an AI analysis is applicable (the package has an upgrade).
+    pub ai_applicable: bool,
+    /// Whether per-library AI analysis was enabled for this scan.
+    pub ai_enabled: bool,
     /// Whether the AI analysis came from the local cache.
     pub ai_cached: bool,
     /// Safe HTML rendering of the AI Markdown analysis (empty without AI).
@@ -183,6 +189,7 @@ impl ReportData {
                 }
 
                 let latest = dependency.latest_version.clone();
+                let ai_applicable = latest.is_some() && dependency.update_type.is_update();
                 let ai_analysis_html = dependency
                     .ai_summary
                     .as_deref()
@@ -207,6 +214,8 @@ impl ReportData {
                     risk_label: risk_label(dependency.update_type),
                     has_insight: !insight.is_empty(),
                     has_ai_analysis,
+                    ai_applicable,
+                    ai_enabled: meta.ai_enabled,
                     ai_cached: has_ai_analysis && dependency.ai_cached,
                     ai_analysis_html,
                     insight: insight.clone(),

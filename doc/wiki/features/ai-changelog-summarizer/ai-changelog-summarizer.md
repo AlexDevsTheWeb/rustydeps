@@ -6,7 +6,7 @@ status: active
 version: 0.3.0
 license: CC-BY-4.0
 created: 2026-10-19
-updated: 2026-10-19
+updated: 2026-10-20
 tags: [feature, ai, changelog, byok, config, cache, report]
 ---
 
@@ -53,11 +53,14 @@ The effective configuration is layered, most specific first:
 }
 ```
 
-- `provider` is `openai`, `gemini`, or `ollama`.
+- `provider` is `openai`, `gemini`, `openrouter`, `ollama`, or `custom`
+  (`google` aliases `gemini`; `openai-compatible`/`proxy` alias `custom`).
 - Defaults: OpenAI `gpt-4o-mini` at `https://api.openai.com/v1`; Gemini
-  `gemini-2.5-flash` at Google's OpenAI-compatible
-  `https://generativelanguage.googleapis.com/v1beta/openai`; Ollama `llama3.1`
-  at `http://localhost:11434/v1` (no API key).
+  `gemini-3.5-flash` at Google's OpenAI-compatible
+  `https://generativelanguage.googleapis.com/v1beta/openai`; OpenRouter
+  `google/gemini-2.5-flash` at `https://openrouter.ai/api/v1`; Ollama `llama3.1`
+  at `http://localhost:11434/v1` (no API key). A `custom` proxy has no defaults
+  and requires both `model` and `endpoint`; its key is optional.
 - `max_tokens` is clamped to `1..=8192`; `cache_enabled` defaults to `true`.
 - `.rustydeps.json` is git-ignored because it may contain a key.
 
@@ -66,8 +69,8 @@ Environment overrides:
 | Variable | Value |
 |----------|-------|
 | `RUSTYDEPS_AI_ENABLED` | `true`/`false`, `1`/`0`, `yes`/`no`, `on`/`off` |
-| `RUSTYDEPS_AI_PROVIDER` | `openai`, `gemini`, `ollama` |
-| `RUSTYDEPS_AI_API_KEY` | Key; also falls back to `OPENAI_API_KEY` or `GEMINI_API_KEY`/`GOOGLE_API_KEY` |
+| `RUSTYDEPS_AI_PROVIDER` | `openai`, `gemini`, `openrouter`, `ollama`, `custom` |
+| `RUSTYDEPS_AI_API_KEY` | Key; also falls back to `OPENAI_API_KEY`, `GEMINI_API_KEY`/`GOOGLE_API_KEY`, or `OPENROUTER_API_KEY` |
 | `RUSTYDEPS_AI_MODEL` | Model name |
 | `RUSTYDEPS_AI_ENDPOINT` | OpenAI-compatible base URL |
 
@@ -88,10 +91,15 @@ The user prompt names the ecosystem, package, current requirement, and target
 version, and asks for a concise (<220 word) package-specific answer. The prompt
 explicitly forbids inventing CVEs or changelog entries.
 
-`src/ai/client.rs` is one OpenAI-compatible `reqwest` client for all three
-providers. It posts to `{endpoint}/chat/completions`, adds a bearer token when a
-key exists, sends non-streaming `system`/`user` messages, and applies a 10-second
-per-request timeout. Only the first choice's text is used.
+`src/ai/client.rs` is one OpenAI-compatible `reqwest` client for every
+provider. It posts to `{endpoint}/chat/completions`, adds a bearer token when a
+key exists, sends non-streaming `system`/`user` messages, and applies a
+45-second per-request timeout. Gemini thinking models are asked for
+`reasoning_effort: "none"` so hidden reasoning cannot consume the summary
+budget; a `400 invalid argument` retries once without the field. Provider-aware
+URL normalization, OpenRouter attribution headers, and URL-rich HTTP
+diagnostics are documented in [[ai-provider-compat]]. Only the first choice's
+text is used.
 
 ## Cache
 
@@ -137,6 +145,8 @@ insight is condensed from the first body line of the analysis.
 ## Related
 
 - [[architecture]] — module boundaries and DTOs.
+- [[ai-provider-compat]] — provider compatibility follow-up (URL resolution,
+  OpenRouter, custom proxies, diagnostics).
 - [[html-report-spec]] — the drawer and AI-tag contract.
 - [[implementation-report]] — file-by-file delivery report.
 - [[roadmap]] — Phase 6 status.

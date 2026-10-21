@@ -35,15 +35,25 @@ pub const DEFAULT_MAX_TOKENS: u32 = 400;
 pub const MAX_MAX_TOKENS: u32 = 8192;
 
 /// An OpenAI-compatible LLM provider.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+///
+/// Every variant speaks the same chat-completions protocol, so one client
+/// covers them all. `provider` selects the default endpoint, the default model,
+/// and whether an API key is required; any of those can be overridden.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, clap::ValueEnum)]
 #[serde(rename_all = "lowercase")]
+#[value(rename_all = "lowercase")]
 pub enum AiProvider {
     /// OpenAI's hosted chat-completions API.
     Openai,
     /// Gemini's OpenAI-compatible endpoint.
     Gemini,
+    /// OpenRouter's multi-model gateway.
+    OpenRouter,
     /// A local Ollama server.
     Ollama,
+    /// Any other OpenAI-compatible proxy; requires an explicit endpoint and
+    /// model.
+    Custom,
 }
 
 impl AiProvider {
@@ -52,31 +62,46 @@ impl AiProvider {
         match self {
             Self::Openai => "openai",
             Self::Gemini => "gemini",
+            Self::OpenRouter => "openrouter",
             Self::Ollama => "ollama",
+            Self::Custom => "custom",
         }
     }
 
     /// Model used when neither the file nor the environment names one.
+    ///
+    /// A custom proxy has no universal default, so the empty string forces the
+    /// user (or the configuration validator) to name a model explicitly.
     pub fn default_model(self) -> &'static str {
         match self {
             Self::Openai => "gpt-4o-mini",
-            Self::Gemini => "gemini-2.5-flash",
+            Self::Gemini => "gemini-3.5-flash",
+            Self::OpenRouter => "google/gemini-2.5-flash",
             Self::Ollama => "llama3.1",
+            Self::Custom => "",
         }
     }
 
     /// Base URL used when neither the file nor the environment names one.
+    ///
+    /// A custom proxy must be given its endpoint explicitly, so its default is
+    /// empty and the client rejects a custom provider without one.
     pub fn default_endpoint(self) -> &'static str {
         match self {
             Self::Openai => "https://api.openai.com/v1",
             Self::Gemini => "https://generativelanguage.googleapis.com/v1beta/openai",
+            Self::OpenRouter => "https://openrouter.ai/api/v1",
             Self::Ollama => "http://localhost:11434/v1",
+            Self::Custom => "",
         }
     }
 
     /// Whether the provider rejects unauthenticated requests.
+    ///
+    /// A custom proxy may be keyless (for example a locally hosted gateway), so
+    /// the key is optional there and validated by the proxy itself.
     pub fn requires_api_key(self) -> bool {
-        !matches!(self, Self::Ollama)
+        matches!(self, Self::Openai | Self::Gemini | Self::OpenRouter)
     }
 
     /// Parse a provider label, accepting a few common spellings.
@@ -84,7 +109,9 @@ impl AiProvider {
         match value.trim().to_ascii_lowercase().as_str() {
             "openai" | "open-ai" | "open_ai" => Some(Self::Openai),
             "gemini" | "google" | "google-gemini" => Some(Self::Gemini),
+            "openrouter" | "open-router" | "open_router" => Some(Self::OpenRouter),
             "ollama" => Some(Self::Ollama),
+            "custom" | "openai-compatible" | "openai_compatible" | "proxy" => Some(Self::Custom),
             _ => None,
         }
     }
@@ -142,6 +169,10 @@ pub struct AiOverrides {
     pub disable: bool,
     /// `--ai-model`: override the configured model.
     pub model: Option<String>,
+    /// `--ai-provider`: override the configured provider.
+    pub provider: Option<AiProvider>,
+    /// `--ai-endpoint`: override the configured base URL.
+    pub endpoint: Option<String>,
 }
 
 /// Fully resolved settings for one run.
@@ -256,7 +287,7 @@ fn apply_env(ai: &mut AiConfig) -> Result<(), ConfigError> {
         ai.provider = AiProvider::from_label(&value).ok_or(ConfigError::InvalidEnv {
             name: "RUSTYDEPS_AI_PROVIDER",
             value,
-            reason: "expected openai, gemini, or ollama",
+            reason: "expected openai, gemini, openrouter, ollama, or custom",
         })?;
     }
 
@@ -278,7 +309,8 @@ fn apply_env(ai: &mut AiConfig) -> Result<(), ConfigError> {
             AiProvider::Gemini => {
                 non_empty_env("GEMINI_API_KEY").or_else(|| non_empty_env("GOOGLE_API_KEY"))
             }
-            AiProvider::Ollama => None,
+            AiProvider::OpenRouter => non_empty_env("OPENROUTER_API_KEY"),
+            AiProvider::Ollama | AiProvider::Custom => None,
         };
     }
 
@@ -295,17 +327,35 @@ fn resolve(ai: AiConfig, overrides: &AiOverrides) -> AiSettings {
         ai.enabled
     };
 
-    let provider = ai.provider;
+    // A CLI provider switch resets provider-specific defaults; otherwise the
+    // configured model and endpoint stay in force.
+    let provider_overridden = overrides.provider.is_some();
+    let provider = overrides.provider.unwrap_or(ai.provider);
+
     let model = overrides
         .model
         .clone()
         .filter(|model| !model.trim().is_empty())
-        .or_else(|| ai.model.filter(|model| !model.trim().is_empty()))
+        .or_else(|| {
+            if provider_overridden {
+                None
+            } else {
+                ai.model.filter(|model| !model.trim().is_empty())
+            }
+        })
         .unwrap_or_else(|| provider.default_model().to_string());
 
-    let endpoint = ai
+    let endpoint = overrides
         .endpoint
+        .clone()
         .filter(|endpoint| !endpoint.trim().is_empty())
+        .or_else(|| {
+            if provider_overridden {
+                None
+            } else {
+                ai.endpoint.filter(|endpoint| !endpoint.trim().is_empty())
+            }
+        })
         .map(|endpoint| endpoint.trim_end_matches('/').to_string())
         .unwrap_or_else(|| provider.default_endpoint().to_string());
 
@@ -444,6 +494,7 @@ mod tests {
             enable: true,
             disable: false,
             model: Some("cli-model".to_string()),
+            ..AiOverrides::default()
         };
 
         let settings = resolve(config, &overrides);
@@ -451,6 +502,30 @@ mod tests {
         assert!(settings.enabled);
         assert_eq!(settings.model, "cli-model");
         assert_eq!(settings.api_key.as_deref(), Some("from-file"));
+    }
+
+    #[test]
+    fn provider_override_resets_provider_specific_defaults() {
+        let config = AiConfig {
+            enabled: true,
+            provider: AiProvider::Gemini,
+            api_key: Some("from-file".to_string()),
+            model: Some("gemini-3.5-flash".to_string()),
+            endpoint: Some("https://generativelanguage.googleapis.com/v1beta".to_string()),
+            max_tokens: 400,
+            cache_enabled: true,
+        };
+        let overrides = AiOverrides {
+            provider: Some(AiProvider::Ollama),
+            ..AiOverrides::default()
+        };
+
+        let settings = resolve(config, &overrides);
+
+        assert!(settings.enabled);
+        assert_eq!(settings.provider, AiProvider::Ollama);
+        assert_eq!(settings.model, AiProvider::Ollama.default_model());
+        assert_eq!(settings.endpoint, AiProvider::Ollama.default_endpoint());
     }
 
     #[test]
@@ -463,6 +538,7 @@ mod tests {
             enable: true,
             disable: true,
             model: None,
+            ..AiOverrides::default()
         };
 
         assert!(!resolve(config, &overrides).enabled);
@@ -488,11 +564,81 @@ mod tests {
 
     #[test]
     fn provider_labels_round_trip() {
-        for provider in [AiProvider::Openai, AiProvider::Gemini, AiProvider::Ollama] {
+        for provider in [
+            AiProvider::Openai,
+            AiProvider::Gemini,
+            AiProvider::OpenRouter,
+            AiProvider::Ollama,
+            AiProvider::Custom,
+        ] {
             assert_eq!(AiProvider::from_label(provider.label()), Some(provider));
         }
         assert_eq!(AiProvider::from_label("Google"), Some(AiProvider::Gemini));
+        assert_eq!(
+            AiProvider::from_label("open-router"),
+            Some(AiProvider::OpenRouter)
+        );
+        assert_eq!(
+            AiProvider::from_label("openai-compatible"),
+            Some(AiProvider::Custom)
+        );
         assert_eq!(AiProvider::from_label("anthropic"), None);
+    }
+
+    #[test]
+    fn every_provider_has_the_documented_defaults() {
+        assert_eq!(AiProvider::Openai.default_model(), "gpt-4o-mini");
+        assert_eq!(
+            AiProvider::Openai.default_endpoint(),
+            "https://api.openai.com/v1"
+        );
+        assert_eq!(AiProvider::Gemini.default_model(), "gemini-3.5-flash");
+        assert_eq!(
+            AiProvider::Gemini.default_endpoint(),
+            "https://generativelanguage.googleapis.com/v1beta/openai"
+        );
+        assert_eq!(
+            AiProvider::OpenRouter.default_model(),
+            "google/gemini-2.5-flash"
+        );
+        assert_eq!(
+            AiProvider::OpenRouter.default_endpoint(),
+            "https://openrouter.ai/api/v1"
+        );
+        assert_eq!(AiProvider::Ollama.default_model(), "llama3.1");
+        assert_eq!(
+            AiProvider::Ollama.default_endpoint(),
+            "http://localhost:11434/v1"
+        );
+        // A custom proxy must supply both values explicitly.
+        assert_eq!(AiProvider::Custom.default_model(), "");
+        assert_eq!(AiProvider::Custom.default_endpoint(), "");
+
+        assert!(AiProvider::Openai.requires_api_key());
+        assert!(AiProvider::Gemini.requires_api_key());
+        assert!(AiProvider::OpenRouter.requires_api_key());
+        assert!(!AiProvider::Ollama.requires_api_key());
+        assert!(!AiProvider::Custom.requires_api_key());
+    }
+
+    #[test]
+    fn a_custom_provider_keeps_the_users_endpoint_and_model() {
+        let config = AiConfig {
+            enabled: true,
+            provider: AiProvider::Custom,
+            api_key: None,
+            model: Some("my-model".to_string()),
+            endpoint: Some("https://llm.example/v1/".to_string()),
+            max_tokens: 400,
+            cache_enabled: true,
+        };
+
+        let settings = resolve(config, &AiOverrides::default());
+
+        assert_eq!(settings.provider, AiProvider::Custom);
+        assert_eq!(settings.model, "my-model");
+        assert_eq!(settings.endpoint, "https://llm.example/v1");
+        assert_eq!(settings.api_key, None);
     }
 
     #[test]
