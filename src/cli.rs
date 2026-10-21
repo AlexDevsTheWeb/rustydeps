@@ -5,6 +5,8 @@ use std::path::PathBuf;
 
 use clap::{Args, Parser, Subcommand, ValueEnum};
 
+use crate::config::AiProvider;
+
 /// Top-level CLI: `rustydeps [OPTIONS] <COMMAND>`.
 #[derive(Debug, Parser)]
 #[command(
@@ -32,10 +34,30 @@ pub struct ScanArgs {
     #[arg(default_value = ".")]
     pub path: PathBuf,
 
-    /// Enable AI-driven changelog summaries (templated until the Phase 5 AI
-    /// module; live providers are detected from the environment).
+    /// Enable AI-driven per-library changelog summaries. Also enabled when the
+    /// configuration file sets `ai.enabled`.
     #[arg(long)]
     pub ai: bool,
+
+    /// Disable AI summaries for this scan, even when the configuration enables
+    /// them.
+    #[arg(long)]
+    pub no_ai: bool,
+
+    /// Override the configured AI model (for example `gpt-4o-mini`).
+    #[arg(long, value_name = "MODEL")]
+    pub ai_model: Option<String>,
+
+    /// Override the configured AI provider. Switching providers also resets the
+    /// model and endpoint to that provider's defaults unless they are given
+    /// explicitly.
+    #[arg(long, value_enum, value_name = "PROVIDER")]
+    pub ai_provider: Option<AiProvider>,
+
+    /// Override the configured AI endpoint (base URL or full chat-completions
+    /// URL).
+    #[arg(long, value_name = "URL")]
+    pub ai_endpoint: Option<String>,
 
     /// Path for the generated HTML report (used with `--format html`).
     #[arg(short, long, default_value = "rustydeps-report.html")]
@@ -84,6 +106,42 @@ mod tests {
         let cli = Cli::try_parse_from(["rustydeps", "scan", "--no-open"]).expect("parse");
         match cli.command {
             Command::Scan(args) => assert!(args.no_open),
+        }
+    }
+
+    #[test]
+    fn parses_ai_overrides() {
+        let cli = Cli::try_parse_from([
+            "rustydeps",
+            "scan",
+            "--ai",
+            "--ai-provider",
+            "ollama",
+            "--ai-model",
+            "llama3.2:3b",
+            "--ai-endpoint",
+            "http://localhost:11434/v1",
+        ])
+        .expect("parse");
+        match cli.command {
+            Command::Scan(args) => {
+                assert!(args.ai);
+                assert!(!args.no_ai);
+                assert_eq!(args.ai_provider, Some(AiProvider::Ollama));
+                assert_eq!(args.ai_model.as_deref(), Some("llama3.2:3b"));
+                assert_eq!(
+                    args.ai_endpoint.as_deref(),
+                    Some("http://localhost:11434/v1")
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn no_ai_is_available_as_a_flag() {
+        let cli = Cli::try_parse_from(["rustydeps", "scan", "--no-ai"]).expect("parse");
+        match cli.command {
+            Command::Scan(args) => assert!(args.no_ai),
         }
     }
 }

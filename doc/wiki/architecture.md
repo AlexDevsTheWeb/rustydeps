@@ -3,10 +3,10 @@ title: "RustyDeps — Architecture"
 type: architecture
 description: "Module breakdown and core DTOs for the RustyDeps CLI."
 status: active
-version: 0.1.0
+version: 0.3.0
 license: CC-BY-4.0
 created: 2026-10-14
-updated: 2026-10-17
+updated: 2026-10-21
 tags: [architecture, rust, cli, dto]
 ---
 
@@ -32,14 +32,16 @@ CLI (clap)
 ## Modules
 
 > Status: the CLI, filesystem walk, manifest parsers, registry clients,
-> SemVer classifier, and HTML report engine below are implemented (Phases 1–5);
-> the AI module is a Phase 3 scaffold with live providers still to come.
+> SemVer classifier, HTML report engine, and the per-library AI summarizer
+> below are implemented (Phases 1–6).
 
 ### CLI (`src/cli.rs`, `src/main.rs`)
 
 Built with `clap` (derive pattern). The `scan` subcommand takes a root `path`
-(default `.`), `--ai`, `--output`/`-o` (default `rustydeps-report.html`),
-`--format html|json`, `--offline`/`--no-fetch`, `--no-open`, and `--verbose`/`-v`.
+(default `.`), `--ai`, `--no-ai`, `--ai-model <MODEL>`,
+`--ai-provider <PROVIDER>`, `--ai-endpoint <URL>`, `--output`/`-o` (default
+`rustydeps-report.html`), `--format html|json`, `--offline`/`--no-fetch`,
+`--no-open`, and `--verbose`/`-v`.
 `main` is `#[tokio::main]` and returns `anyhow::Result`; it initializes
 `tracing-subscriber` (logs go to stderr so stdout stays clean for `--format
 json`) and dispatches the subcommand. On text runs it prints the "Full Block
@@ -171,23 +173,73 @@ rows replaced by loops) into a single self-contained HTML file: all CSS and
 vanilla JavaScript are inline, so it opens offline with no network access. Rows
 carry a copyable per-ecosystem update command and each project exposes an
 "Update All" command in its expanded body. Cards render collapsed by default.
+When an AI analysis exists, the drawer renders the Markdown briefing in a
+**🤖 AI Library Release Analysis** card, with a `⚡ Cached analysis` badge on a
+cache hit. Only rows with an available upgrade are eligible: an up-to-date or
+unknown row renders a **📦 Dependency Status** card with no "AI analysis
+unavailable" notice, while an eligible row without a summary shows the generic
+insight and the package-changelog anchor. Anchors are the only external URLs in
+the document; CSS, JavaScript, the logo, and the favicon remain inline.
 See [[phase-4-html-report]]; the template design (palette, project-centric
 component hierarchy, risk indicators, inline drawer, filter/search, empty state)
 is fixed by [[html-report-spec]]. The card disclosure and row ordering are
-refined by [[report-ux-refinements]].
+refined by [[report-ux-refinements]], and the AI card by
+[[ai-changelog-summarizer]].
 
 The report carries branding and a readable type scale: an inline SVG logo in the
 header and an embedded data-URI SVG favicon (both self-contained — no external
 image request), on a 12/13/14/16px scale. See [[ui-font-branding]].
 
-### AI module (`src/ai/`)
+### AI module (`src/ai/`, `src/config/`)
 
-Optional and flag-gated. Phase 3 scaffolds it: `Summarizer` detects a provider
-from `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, or `RUSTYDEPS_AI_ENDPOINT`, and every
-`AtRisk`/`Breaking` dependency receives a templated one-line summary. Live
-provider calls that fetch the relevant changelog/release notes and summarize
-breaking changes and migration notes are Phase 5. Any failure here is non-fatal
-— the scan and report still complete.
+Optional and BYOK-configured (Milestone 0.3.0, hardened by
+[[ai-provider-compat]]). `src/config/mod.rs` resolves settings in layers: CLI
+(`--ai`, `--no-ai`, `--ai-model`, `--ai-provider`, `--ai-endpoint`),
+`RUSTYDEPS_AI_*` environment variables,
+`~/.config/rustydeps/config.json` (XDG on Unix, `%APPDATA%` on Windows), then a
+project `.rustydeps.json` fallback when the user file is absent, then provider
+defaults. A CLI provider switch also resets the model and endpoint to that
+provider's defaults unless they are given explicitly, so `--ai-provider ollama`
+cannot inherit a Gemini URL or model. Malformed files or values disable AI for
+the run instead of failing the scan.
+
+`AiProvider` covers OpenAI (`gpt-4o-mini` at `https://api.openai.com/v1`), Gemini
+(`gemini-3.5-flash` at the OpenAI-compatible
+`https://generativelanguage.googleapis.com/v1beta/openai`), OpenRouter
+(`google/gemini-2.5-flash` at `https://openrouter.ai/api/v1`), Ollama
+(`llama3.1` at `http://localhost:11434/v1`, no key), and a custom proxy that
+requires an explicit endpoint and model and accepts an optional key. OpenAI,
+Gemini, and OpenRouter require keys; keys fall back to `OPENAI_API_KEY`,
+`GEMINI_API_KEY`/`GOOGLE_API_KEY`, and `OPENROUTER_API_KEY` respectively.
+
+`Summarizer` (`src/ai/summary.rs`) analyzes only `Safe`/`AtRisk`/`Breaking` rows
+with a resolved target. Up-to-date and unknown rows never reach the client. It
+checks `SummaryCache` first, then calls `AiClient` (`src/ai/client.rs`), an async
+`reqwest` chat-completions client with a 45-second timeout, bounded to four
+concurrent packages. A fatal provider error (401/402/403/404/429, a body
+mentioning quota, or a connection failure) trips a scan-local breaker: one
+warning is logged and the remaining packages are skipped, so a quota-exhausted
+key never floods the console. `chat_endpoint`
+normalizes each provider base URL — bare origins, `/v1` or `/v1beta` roots,
+trailing slashes, full `/chat/completions` URLs, and query strings all resolve to
+one valid endpoint — and OpenRouter requests add `HTTP-Referer`/`X-Title`
+attribution headers. `src/ai/prompt.rs` fixes the four-section Markdown
+contract; one request is made per
+`(ecosystem, package, current_version, target_version)`.
+
+`SummaryCache` (`src/ai/cache.rs`) stores one JSON entry per target version at
+`~/.cache/rustydeps/changelogs/{ecosystem}_{package}_{target_version}.json`, so
+projects sharing a dependency reuse the analysis for free. Cache entries are
+validated against ecosystem, package, and target before use; `cache_enabled:
+false` skips disk entirely.
+
+The report converts the Markdown with `src/report/markdown.rs`
+(`pulldown-cmark`, raw HTML events dropped) and inserts it with Askama's
+`|safe` filter. Every failure — disabled, missing key, timeout, HTTP error,
+empty response, cache write error — is logged and leaves `ai_summary` as
+`None`; the scan and report still complete. HTTP failures log the resolved
+request URL, status, and a single-line body excerpt. See
+[[ai-changelog-summarizer]] and [[ai-provider-compat]].
 
 ## Core DTOs
 
@@ -208,8 +260,9 @@ pub enum UpdateType {
 
 The classified result set is `ClassifiedDependency` in `src/classifier/mod.rs`
 (`name`, `ecosystem`, `current_version`, `latest_version`, `update_type`,
-`manifest_path`, `is_dev_dependency`, `ai_summary`); it is the input to the
-Phase 4 report.
+`manifest_path`, `is_dev_dependency`, `ai_summary`, `ai_cached`); it is the input
+to the Phase 4 report. `ai_summary` holds the Markdown briefing (or `None`), and
+`ai_cached` marks a cache hit for the report's ⚡ badge.
 
 ## Quality bars
 
@@ -225,5 +278,6 @@ Phase 4 report.
 - [[phase-3-semver-classifier]] — the classifier, AI scaffold, and CLI polish.
 - [[phase-4-html-report]] — the self-contained HTML report engine.
 - [[phase-5-ecosystems]] — the PyPI/Go/Composer parsers and clients.
+- [[ai-changelog-summarizer]] — the per-library summarizer, config, and cache.
 - [[okf-compliance]] — how this documentation is licensed and validated.
 - [[index]] — knowledge-graph entrypoint.

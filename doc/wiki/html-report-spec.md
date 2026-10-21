@@ -3,10 +3,10 @@ title: "RustyDeps — HTML Report Specification"
 type: reference
 description: "Finalized UX/UI specification for the interactive HTML report: industrial dark mode, project-centric grouping, minimalist risk indicators."
 status: active
-version: 0.1.0
+version: 0.3.0
 license: CC-BY-4.0
 created: 2026-10-14
-updated: 2026-10-15
+updated: 2026-10-19
 tags: [report, ui, design, spec, html, phase-4]
 ---
 
@@ -113,16 +113,26 @@ a subtle `AI` tag in neutral grey (`#71717a` / `zinc-400`) beside a concise
 one-line release summary. The full changelog break-down lives in the expanded
 drawer, not the collapsed row.
 
+The drawer card is titled **🤖 AI Library Release Analysis**. It renders the
+per-package Markdown briefing under four headings (breaking changes, security,
+performance/architectural impact, migration advice), plus the existing major-bump
+badge. A cache hit adds a green `⚡ Cached analysis` badge. Without an analysis,
+the card shows the generic insight and an "AI analysis unavailable" note.
+
 ## 6. Interactive components
 
 ### Inline dependency drawer
 
 Clicking a dependency row expands an in-line drawer directly beneath it
-(`.dependency-drawer` / `<details>`), containing:
+(`.dep-drawer`), containing:
 
-- the extended AI changelog summary (breaking changes, migration impact);
+- the AI Library Release Analysis card (or its fallback);
+- a **View package changelog** link to the ecosystem's published-versions page;
 - a terminal code block with the exact CLI update command (e.g.
   `cargo update -p tokio --precise 2.0.0`) and a one-click copy button.
+
+Changelog anchors are the only external URLs; report resources stay inline and
+the document still opens without a network connection (anchors are not fetched).
 
 ### Filter and search bar
 

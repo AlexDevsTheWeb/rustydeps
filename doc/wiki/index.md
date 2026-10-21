@@ -3,10 +3,10 @@ title: "RustyDeps Wiki — Index"
 type: index
 description: "Entrypoint and knowledge-graph map for the RustyDeps LLM-Wiki."
 status: active
-version: 0.1.0
+version: 0.3.0
 license: CC-BY-4.0
 created: 2026-10-14
-updated: 2026-10-17
+updated: 2026-10-21
 tags: [index, rustydeps, llm-wiki]
 ---
 
@@ -43,6 +43,9 @@ and produces an interactive HTML report with optional AI changelog summaries.
 | [[cli-scanning-ux]] | Interactive scan progress (spinners, a per-repository `pos/len` counter, per-manifest metrics), the non-TTY/JSON fallback, and the v0.2.0 version bump; [implementation report](features/cli-scanning-ux/implementation-report.md). |
 | [[ui-font-branding]] | HTML report type-scale bump (12/13/14/16px) plus an inline SVG brand logo and an embedded data-URI SVG favicon, keeping the report self-contained; [implementation report](features/ui-font-branding/implementation-report.md). |
 | [[report-ux-refinements]] | Orphan-free CLI progress (`MultiProgress` + suspended writes) and report card refinements (collapsed by default, clean headers, path + Update All in the body, rows sorted by risk); [implementation report](features/report-ux-refinements/implementation-report.md). |
+| [[ai-changelog-summarizer]] | Milestone 0.3.0 per-library AI briefings: layered BYOK JSON config, OpenAI/Gemini/Ollama client, per-version disk cache, graceful fallback, and the report AI card; [implementation report](features/ai-changelog-summarizer/implementation-report.md). |
+| [[ai-provider-compat]] | Provider-aware URL resolution for OpenAI, Gemini, OpenRouter, Ollama, and custom proxies; OpenRouter headers, request diagnostics with URL/status/body, and the full README BYOK guide; [implementation report](features/ai-provider-compat/implementation-report.md). |
+| [[free-local-ai]] | Quota-free Ollama summaries, `--ai-provider`/`--ai-endpoint`, upgrade-only AI requests, a fatal-error circuit breaker, and report drawers that omit the unavailable notice on up-to-date packages; [implementation report](features/free-local-ai/implementation-report.md). |
 
 ## Source documents
 
@@ -72,6 +75,12 @@ and produces an interactive HTML report with optional AI changelog summaries.
 - `doc/raw/2026-10-17/2026-10-17-issue21-fix.md` — the issue #21 follow-up
   (CLI progress rendering + report card refinements) implemented by
   [[report-ux-refinements]].
+- `doc/raw/2026-10-19/2026-10-19-v0.3.0.md` — Milestone 0.3.0 brief for the
+  per-library AI summarizer and BYOK config implemented by
+  [[ai-changelog-summarizer]].
+- `doc/raw/2026-10-20/2026-10-20-fix.md` — provider compatibility, URL
+  resolution, HTTP diagnostics, and README BYOK brief implemented by
+  [[ai-provider-compat]].
 
 ## Conventions
 

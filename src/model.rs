@@ -62,6 +62,14 @@ pub enum UpdateType {
 }
 
 impl UpdateType {
+    /// Whether this outcome describes an available upgrade.
+    ///
+    /// Up-to-date and unknown dependencies have nothing to analyze, so callers
+    /// must not spend registry or AI requests on them.
+    pub fn is_update(self) -> bool {
+        matches!(self, Self::Breaking | Self::AtRisk | Self::Safe)
+    }
+
     /// Short lowercase label used in console and JSON output.
     pub fn label(self) -> &'static str {
         match self {

@@ -1,6 +1,6 @@
 [package]
 name = "rustydeps"
-version = "0.2.0"
+version = "0.3.0-dev"
 edition = "2021"
 description = "Fast, cross-platform CLI that scans local repositories for dependency manifests and reports available upgrades."
 license = "MIT OR Apache-2.0"
@@ -18,6 +18,7 @@ futures = "0.3"
 ignore = "0.4"
 indicatif = "0.18"
 open = "5"
+pulldown-cmark = "0.13"
 reqwest = { version = "0.12", features = ["json"] }
 semver = "1"
 serde = { version = "1.0", features = ["derive"] }

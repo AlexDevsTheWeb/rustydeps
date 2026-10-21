@@ -6,7 +6,7 @@ status: active
 version: 0.1.0
 license: CC-BY-4.0
 created: 2026-10-14
-updated: 2026-10-17
+updated: 2026-10-21
 tags: [log, history]
 ---
 
@@ -518,8 +518,138 @@ warnings` clean; `cargo test` 94 passed (90 + 4); a pty run reaches `3/3` with n
 leftover bar frame; non-TTY stdout has 0 escape sequences and JSON stays pure;
 OKF validator PASSED (0 errors, 0 warnings).
 
+## 2026-10-19 — Milestone 0.3.0: per-library AI changelog summarizer
+
+Applied `doc/raw/2026-10-19/2026-10-19-v0.3.0.md` on
+`feat/ai-changelog-summarizer` (version `0.3.0-dev`):
+
+- Added the feature subfolder `features/ai-changelog-summarizer/` with
+  [[ai-changelog-summarizer]] and its implementation report.
+- `src/config/mod.rs` — layered BYOK configuration (user
+  `~/.config/rustydeps/config.json`, project `.rustydeps.json` fallback,
+  `RUSTYDEPS_AI_*`, CLI flags), provider
+  defaults and native key fallbacks, cache path, and validation errors.
+- `src/ai/client.rs`, `src/ai/prompt.rs`, `src/ai/cache.rs` — one
+  OpenAI-compatible client (OpenAI/Gemini/Ollama, 10s timeout), the fixed
+  four-section prompt, and per-version JSON caching under
+  `~/.cache/rustydeps/changelogs/`.
+- `src/ai/summary.rs` — cache-first, four-way concurrent `Summarizer` for every
+  outdated resolved package; the Phase 3 templated summaries are removed.
+- `src/cli.rs`, `src/main.rs` — `--no-ai` and `--ai-model`, layered settings
+  loading, an AI spinner, and a compact analysis/cache tally.
+- `src/classifier/mod.rs` — `ClassifiedDependency.ai_cached`.
+- `src/report/markdown.rs`, `src/report/mod.rs`, `templates/report.html` — safe
+  Markdown rendering, the 🤖 AI card, `⚡ Cached analysis` badge, fallback note,
+  and per-ecosystem changelog links.
+- `README.md`, `.gitignore`, `Cargo.toml`/`Cargo.lock` — BYOK docs, ignored
+  local config, `pulldown-cmark`, and the `0.3.0-dev` version.
+- Updated [[architecture]] (CLI, report generator, AI module, DTOs),
+  [[roadmap]] (Phase 6 complete), [[html-report-spec]] (AI card and drawer), and
+  [[index]] (feature row and source document).
+
+Validation: `cargo fmt --all --check` clean; `cargo clippy --all-targets -- -D
+warnings` clean; `cargo test` 122 passed; `cargo build --release` succeeded; an
+offline JSON scan and an HTML scan both completed with `ai_summary: null`.
+A local OpenAI-compatible mock served 19 analyses; a second scan made no new
+requests and rendered 19 `⚡ Cached analysis` badges. OKF validator PASSED
+(0 errors, 0 warnings). Opened draft PR
+[#24](https://github.com/AlexDevsTheWeb/rustydeps/pull/24).
+
+## 2026-10-20 — AI provider compatibility & README BYOK guide
+
+Applied `doc/raw/2026-10-20/2026-10-20-fix.md` on `fix/ai-provider-compat`:
+
+- Added the feature subfolder `features/ai-provider-compat/` with
+  [[ai-provider-compat]] and its implementation report.
+- `src/config/mod.rs` — `AiProvider` gains `OpenRouter` and `Custom`; added
+  provider defaults and label aliases, `OPENROUTER_API_KEY` fallback, optional
+  keys for custom proxies, and required model/endpoint semantics for custom;
+  expanded tests.
+- `src/ai/client.rs` — one provider-aware `chat_endpoint` normalizer handling
+  bare origins, `/v1` and `/v1beta` roots, trailing slashes, full endpoints, and
+  query strings; OpenRouter `HTTP-Referer`/`X-Title` headers; URL-bearing
+  transport/status errors; whitespace-collapsed, character-safe body snippets;
+  tests across every provider.
+- `README.md` — rewrote the *AI changelog summaries (BYOK)* section with the
+  local-first model, config and cache paths, a provider table, five copy-paste
+  configurations, environment/CLI tables, and diagnostics guidance.
+- Updated [[architecture]] (AI module), [[ai-changelog-summarizer]] (provider
+  list and follow-up link), [[index]] (feature row and source document), and
+  this log.
+
+The brief's inline code spans are empty in the source file; provider labels,
+endpoint forms, and variable names were reconstructed from the existing
+implementation. Per the brief, no new development report was created under
+`doc/raw/`; the notes live in the wiki. The source brief is committed unchanged.
+
+Validation: `cargo fmt --all --check` clean; `cargo clippy --all-targets -- -D
+warnings` clean; `cargo test` 130 passed; `cargo build --release` succeeded; a
+CLI smoke test against a local mock confirmed `/v1/chat/completions` resolution
+and URL/status/body diagnostics; OKF validator PASSED (0 errors, 0 warnings).
+
+## 2026-10-20 — AI provider compatibility draft PR opened
+
+Opened draft PR [#25](https://github.com/AlexDevsTheWeb/rustydeps/pull/25)
+(`fix/ai-provider-compat` → `development`) and recorded the link in the
+implementation report's MR section.
+
+Validation: OKF validator PASSED (0 errors, 0 warnings).
+
+## 2026-10-20 — Gemini AI failure fix (retired model, reasoning budget, timeout)
+
+Diagnosed the reported "console errors and no AI sections" against the live
+Gemini endpoint. The configured `gemini-1.5-flash-latest` returned HTTP 404
+(`is not found for API version v1main`); the key and endpoint were valid. Two
+latent defaults compounded the failure: `gemini-2.5-flash` is no longer served
+to new accounts, and the 10-second timeout cut off real reasoning-model
+responses.
+
+- `src/config/mod.rs` — Gemini default model is now `gemini-3.5-flash`; the
+  provider-defaults test was updated.
+- `src/ai/client.rs` — request timeout raised to 45 seconds; Gemini thinking
+  models send `reasoning_effort: "none"` so hidden reasoning no longer consumes
+  the 400-token summary budget; a `400 invalid argument` retries once without
+  the field so lite/older variants keep working. Added a socket-level retry test
+  and a helper test for the model gate.
+- `README.md`, [[architecture]], [[ai-provider-compat]], and
+  [[ai-changelog-summarizer]] — current defaults, timeout, diagnostics hint for
+  retired model IDs, and the reasoning rule.
+- Repaired the local `~/.config/rustydeps/config.json` model (backup written
+  beside it). End-to-end scan: 3/3 packages analyzed, no warnings; repeat scan
+  served 3/3 from the cache.
+
+Validation: `cargo fmt --all`; `cargo test` 132 passed; `cargo clippy
+--all-targets -- -D warnings` clean; live scan produced AI cards for every
+outdated package. OKF validator result recorded in the development report.
 
 
 
 
 
+
+## 2026-10-21 — Free local AI and honest report states
+
+Follow-up to the Gemini quota-exceeded warnings. AI requests are now limited to
+rows with an available upgrade, a fatal provider error trips a scan-local
+breaker (one warning instead of one per package), and the report no longer shows
+"AI analysis unavailable" on up-to-date or unknown rows.
+
+- `src/model.rs` — `UpdateType::is_update()` shared by the summarizer and report.
+- `src/ai/summary.rs` — upgrade-only gating and the fatal-error circuit breaker.
+- `src/ai/client.rs` — `AiClientError::is_fatal()` for auth/quota/model/connect
+  failures.
+- `src/config/mod.rs`, `src/cli.rs`, `src/main.rs` — `--ai-provider` and
+  `--ai-endpoint`; provider switches reset model/endpoint defaults.
+- `src/report/`, `templates/report.html` — `ai_applicable`/`ai_enabled` row
+  state; **📦 Dependency Status** for up-to-date and unknown rows.
+- `README.md`, [[architecture]], and new [[free-local-ai]] feature page plus
+  implementation report.
+
+Local environment: Ollama 0.40.7 installed and started, `llama3.2:3b` pulled,
+and `~/.config/rustydeps/config.json` switched to the Ollama provider (Gemini
+config backed up beside it).
+
+Validation: `cargo test --all-targets` 137 passed; `cargo clippy --all-targets
+-- -D warnings` clean; live scan of `~/CODE/CES/babette` produced 21 analyses
+(14 cached, 7 fresh from Ollama), 16 status cards, 0 unavailable notices, and no
+quota warnings. OKF validation recorded in the development report.

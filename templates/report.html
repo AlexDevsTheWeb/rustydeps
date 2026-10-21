@@ -623,6 +623,7 @@
       margin-bottom: 8px;
       display: flex;
       align-items: center;
+      flex-wrap: wrap;
       gap: 6px;
     }
 
@@ -645,6 +646,116 @@
       color: var(--text-secondary);
       line-height: 1.55;
       margin-bottom: 12px;
+    }
+
+    /* Per-library AI analysis (rendered Markdown) */
+    .ai-cache-badge {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      text-transform: none;
+      letter-spacing: 0;
+      color: var(--accent-safe);
+      border: 1px solid #14532d;
+      background: #0f1f17;
+      border-radius: 3px;
+      padding: 0 5px;
+      line-height: 1.5;
+    }
+
+    .ai-analysis {
+      background: #101014;
+      border: 1px solid var(--border-subtle);
+      border-left: 2px solid #3f3f46;
+      border-radius: 6px;
+      padding: 14px 16px;
+      font-size: 13px;
+      line-height: 1.6;
+      color: var(--text-secondary);
+    }
+
+    .ai-analysis h1,
+    .ai-analysis h2,
+    .ai-analysis h3 {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin: 14px 0 6px;
+      letter-spacing: 0.01em;
+    }
+
+    .ai-analysis h1:first-child,
+    .ai-analysis h2:first-child,
+    .ai-analysis h3:first-child {
+      margin-top: 0;
+    }
+
+    .ai-analysis p {
+      margin: 6px 0;
+    }
+
+    .ai-analysis ul,
+    .ai-analysis ol {
+      margin: 6px 0 8px;
+      padding-left: 20px;
+    }
+
+    .ai-analysis li {
+      margin: 3px 0;
+    }
+
+    .ai-analysis strong {
+      color: var(--text-primary);
+      font-weight: 500;
+    }
+
+    .ai-analysis code {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      background: #18181d;
+      border: 1px solid var(--border-subtle);
+      border-radius: 3px;
+      padding: 1px 4px;
+      color: #7dd3fc;
+    }
+
+    .ai-analysis pre {
+      background: #09090b;
+      border: 1px solid var(--border-subtle);
+      border-radius: 4px;
+      padding: 10px 12px;
+      overflow-x: auto;
+      margin: 8px 0;
+    }
+
+    .ai-analysis pre code {
+      background: transparent;
+      border: 0;
+      padding: 0;
+      color: #d4d4d8;
+      font-size: 12px;
+      line-height: 1.55;
+    }
+
+    .ai-analysis blockquote {
+      border-left: 2px solid var(--border);
+      margin: 8px 0;
+      padding-left: 10px;
+      color: var(--text-muted);
+    }
+
+    .ai-analysis a {
+      color: #38bdf8;
+      text-decoration: none;
+    }
+
+    .ai-analysis a:hover {
+      text-decoration: underline;
+    }
+
+    .ai-unavailable {
+      margin-top: 8px;
+      font-size: 12px;
+      color: var(--text-faint);
     }
 
     .breaking-list {
@@ -1156,7 +1267,7 @@
 <span class="risk-label">{{ dep.risk_label }}</span>
 </div>
 <div class="col-insight">
-{% if dep.has_insight %}{% if dep.has_ai_summary %}<span class="ai-prefix-icon">AI</span>{% endif %}<span class="insight-text">{{ dep.insight }}</span>{% endif %}
+{% if dep.has_insight %}{% if dep.has_ai_analysis %}<span class="ai-prefix-icon">AI</span>{% endif %}<span class="insight-text">{{ dep.insight }}</span>{% endif %}
 </div>
 <div class="col-actions">
 {% if dep.has_command %}<button class="icon-btn" data-command="{{ dep.command }}" onclick="event.stopPropagation(); copyFromButton(this)" title="Copy CLI Command">
@@ -1176,12 +1287,23 @@
 <div class="drawer-grid">
 <div>
 <div class="drawer-section-title">
-<span>AI Changelog &amp; Impact Analysis</span>
+<span>{% if dep.has_ai_analysis || (dep.ai_applicable && dep.ai_enabled) %}🤖 AI Library Release Analysis{% else %}📦 Dependency Status{% endif %}</span>
 {% if dep.has_bump_badge %}<span class="semver-badge">{{ dep.bump_label }}</span>{% endif %}
+{% if dep.ai_cached %}<span class="ai-cache-badge">⚡ Cached analysis</span>{% endif %}
 </div>
+{% if dep.has_ai_analysis %}
+<div class="ai-analysis">{{ dep.ai_analysis_html|safe }}</div>
+{% else %}
 <div class="drawer-summary-card">
 <div class="drawer-summary-title">{{ dep.drawer_title }}</div>
 <div class="drawer-summary-desc">{{ dep.drawer_desc }}</div>
+{% if dep.ai_applicable && dep.ai_enabled %}
+<div class="ai-unavailable">AI analysis unavailable for this package; see the changelog link below.</div>
+{% endif %}
+</div>
+{% endif %}
+<div class="drawer-meta-links">
+<a class="drawer-link" href="{{ dep.changelog_url }}" target="_blank" rel="noopener noreferrer">View package changelog ↗</a>
 </div>
 </div>
 <div class="cli-box">

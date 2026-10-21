@@ -12,6 +12,8 @@
 #[cfg(test)]
 mod tests;
 
+mod markdown;
+
 use std::collections::BTreeMap;
 use std::path::Path;
 
@@ -25,6 +27,8 @@ use crate::model::{Ecosystem, UpdateType};
 pub struct ReportMeta {
     /// Wall-clock duration of the scan and registry lookups, in milliseconds.
     pub scan_duration_ms: Option<u128>,
+    /// Whether per-library AI analysis ran for this scan.
+    pub ai_enabled: bool,
 }
 
 /// One dependency row in the report.
@@ -49,10 +53,20 @@ pub struct DependencyReport {
     pub risk_label: &'static str,
     /// Whether the insight column has text.
     pub has_insight: bool,
-    /// Whether the insight is an AI summary (shows the `AI` prefix).
-    pub has_ai_summary: bool,
+    /// Whether the row carries a full AI analysis in its drawer.
+    pub has_ai_analysis: bool,
+    /// Whether an AI analysis is applicable (the package has an upgrade).
+    pub ai_applicable: bool,
+    /// Whether per-library AI analysis was enabled for this scan.
+    pub ai_enabled: bool,
+    /// Whether the AI analysis came from the local cache.
+    pub ai_cached: bool,
+    /// Safe HTML rendering of the AI Markdown analysis (empty without AI).
+    pub ai_analysis_html: String,
     /// One-line insight shown in the row.
     pub insight: String,
+    /// Link to the package's published versions/changelog.
+    pub changelog_url: String,
     /// Whether there is an update command to copy.
     pub has_command: bool,
     /// Copyable CLI update command (empty when there is nothing to update).
@@ -175,10 +189,18 @@ impl ReportData {
                 }
 
                 let latest = dependency.latest_version.clone();
-                let insight = dependency
+                let ai_applicable = latest.is_some() && dependency.update_type.is_update();
+                let ai_analysis_html = dependency
                     .ai_summary
-                    .clone()
-                    .unwrap_or_else(|| default_insight(dependency.update_type).to_string());
+                    .as_deref()
+                    .map(markdown::render)
+                    .unwrap_or_default();
+                let has_ai_analysis = !ai_analysis_html.trim().is_empty();
+                let insight = if has_ai_analysis {
+                    row_insight(dependency.ai_summary.as_deref().unwrap_or_default())
+                } else {
+                    default_insight(dependency.update_type).to_string()
+                };
                 let is_breaking = dependency.update_type == UpdateType::Breaking;
 
                 rows.push(DependencyReport {
@@ -191,8 +213,13 @@ impl ReportData {
                     dot_class: dot_class(dependency.update_type),
                     risk_label: risk_label(dependency.update_type),
                     has_insight: !insight.is_empty(),
-                    has_ai_summary: dependency.ai_summary.is_some(),
+                    has_ai_analysis,
+                    ai_applicable,
+                    ai_enabled: meta.ai_enabled,
+                    ai_cached: has_ai_analysis && dependency.ai_cached,
+                    ai_analysis_html,
                     insight: insight.clone(),
+                    changelog_url: changelog_url(dependency.ecosystem, &dependency.name),
                     has_command: !command.is_empty(),
                     command,
                     drawer_id: format!("drawer-{project_index}-{dep_index}"),
@@ -345,6 +372,88 @@ fn default_insight(update_type: UpdateType) -> &'static str {
         UpdateType::Safe => "Patch or minor update inside the declared requirement.",
         UpdateType::UpToDate => "Declared version already matches the latest release.",
         UpdateType::Unknown => "Registry data unavailable; versions could not be compared.",
+    }
+}
+
+/// Condense a Markdown analysis into one row-friendly line.
+fn row_insight(markdown: &str) -> String {
+    for line in markdown.lines() {
+        let trimmed = line.trim();
+        if trimmed.is_empty()
+            || trimmed.starts_with('#')
+            || trimmed.starts_with("```")
+            || trimmed.starts_with('|')
+            || trimmed.starts_with("---")
+            || trimmed.starts_with('<')
+        {
+            continue;
+        }
+
+        let text = strip_inline_markdown(trimmed);
+        if !text.is_empty() {
+            return truncate(&text, 160);
+        }
+    }
+
+    "AI analysis available in the drawer.".to_string()
+}
+
+/// Remove the most common inline Markdown decorations from a row insight.
+fn strip_inline_markdown(input: &str) -> String {
+    let without_links = strip_links(input);
+    without_links
+        .trim_start_matches(['-', '*', '>', ' '])
+        .replace(['*', '_', '`'], "")
+        .trim()
+        .to_string()
+}
+
+/// Replace `[label](url)` with `label`.
+fn strip_links(input: &str) -> String {
+    let mut output = String::with_capacity(input.len());
+    let mut rest = input;
+
+    while let Some(open) = rest.find('[') {
+        output.push_str(&rest[..open]);
+        let after = &rest[open + 1..];
+
+        if let Some(close) = after.find("](") {
+            let label = &after[..close];
+            let tail = &after[close + 2..];
+            if let Some(end) = tail.find(')') {
+                output.push_str(label);
+                rest = &tail[end + 1..];
+                continue;
+            }
+        }
+
+        output.push('[');
+        rest = after;
+    }
+
+    output.push_str(rest);
+    output
+}
+
+/// Truncate on a character boundary, appending an ellipsis.
+fn truncate(value: &str, limit: usize) -> String {
+    if value.chars().count() <= limit {
+        return value.to_string();
+    }
+
+    let mut truncated: String = value.chars().take(limit.saturating_sub(1)).collect();
+    truncated.push('…');
+    truncated
+}
+
+/// Standard published-versions page for a package.
+fn changelog_url(ecosystem: Ecosystem, name: &str) -> String {
+    match ecosystem {
+        Ecosystem::Cargo => format!("https://crates.io/crates/{name}/versions"),
+        Ecosystem::Npm => format!("https://www.npmjs.com/package/{name}?activeTab=versions"),
+        Ecosystem::Pypi => format!("https://pypi.org/project/{name}/#history"),
+        Ecosystem::Go => format!("https://pkg.go.dev/{name}?tab=versions"),
+        Ecosystem::Composer => format!("https://packagist.org/packages/{name}#versions"),
     }
 }
 

@@ -1,165 +1,317 @@
-//! Provider detection and templated summaries for the Phase 3 AI module.
+//! Per-library AI summarizer orchestration.
 //!
-//! No outbound LLM calls are made yet: [`Summarizer::new`] inspects the
-//! environment so the CLI can report which provider *would* be used, and every
-//! at-risk/breaking dependency receives a templated one-line summary. Phase 5
-//! replaces the template with a real changelog summary.
+//! The summarizer turns every outdated, registry-resolved dependency into an
+//! independent request (or cache lookup), bounded by [`MAX_CONCURRENCY`].
+//! Failures are logged and leave `ai_summary` as `None`; they never fail the
+//! scan.
 
-use std::env;
+use std::path::PathBuf;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Arc;
 
-use tracing::info;
+use futures::stream::{self, StreamExt};
+use tracing::{debug, info, warn};
 
-use crate::model::UpdateType;
+use super::cache::{now_unix_seconds, CachedSummary, SummaryCache};
+use super::client::AiClient;
+use super::prompt::{user_prompt, UpgradeContext, SYSTEM_PROMPT};
+use crate::classifier::ClassifiedDependency;
+use crate::config::{self, AiOverrides, AiProvider, AiSettings};
 
-/// Environment variable naming a custom LLM endpoint.
-pub const CUSTOM_ENDPOINT_ENV: &str = "RUSTYDEPS_AI_ENDPOINT";
+/// Maximum number of provider requests in flight at once.
+pub const MAX_CONCURRENCY: usize = 4;
 
-/// An LLM provider RustyDeps can be configured with.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum AiProvider {
-    /// Anthropic (`ANTHROPIC_API_KEY`).
-    Anthropic,
-    /// OpenAI (`OPENAI_API_KEY`).
-    OpenAI,
-    /// A custom endpoint (`RUSTYDEPS_AI_ENDPOINT`).
-    Custom,
-}
-
-impl AiProvider {
-    /// Short lowercase label used in logs.
-    pub fn label(self) -> &'static str {
-        match self {
-            Self::Anthropic => "anthropic",
-            Self::OpenAI => "openai",
-            Self::Custom => "custom",
-        }
-    }
-}
-
-/// Which provider the environment configures, if any.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct AiSummaryConfig {
-    /// Whether `--ai` was passed.
-    pub enabled: bool,
-    /// The provider detected from the environment, if any.
-    pub provider: Option<AiProvider>,
-}
-
-impl AiSummaryConfig {
-    /// Detect provider configuration from the environment.
-    ///
-    /// Anthropic wins over OpenAI over a custom endpoint when several are set.
-    pub fn from_env(enabled: bool) -> Self {
-        let provider = if env::var_os("ANTHROPIC_API_KEY").is_some() {
-            Some(AiProvider::Anthropic)
-        } else if env::var_os("OPENAI_API_KEY").is_some() {
-            Some(AiProvider::OpenAI)
-        } else if env::var_os(CUSTOM_ENDPOINT_ENV).is_some() {
-            Some(AiProvider::Custom)
-        } else {
-            None
-        };
-
-        Self { enabled, provider }
-    }
-}
-
-/// Templated one-line summary for a classified update, if one is worthwhile.
-pub fn fallback_summary(update_type: UpdateType) -> Option<&'static str> {
-    match update_type {
-        UpdateType::Breaking => {
-            Some("Major version bump — potential breaking API changes; review before upgrading.")
-        }
-        UpdateType::AtRisk => {
-            Some("Upgrade outside the declared range — verify compatibility before updating.")
-        }
-        UpdateType::Safe | UpdateType::UpToDate | UpdateType::Unknown => None,
-    }
-}
-
-/// Produces the `ai_summary` value for a classified dependency.
-#[derive(Debug, Clone, Copy)]
+/// Produces `ai_summary` values for classified dependencies.
+#[derive(Clone)]
 pub struct Summarizer {
-    config: AiSummaryConfig,
+    client: Option<AiClient>,
+    cache: SummaryCache,
+    enabled: bool,
+    provider: Option<AiProvider>,
+    model: Option<String>,
+    /// Set after a fatal provider error; stops the remaining requests.
+    stop: Arc<AtomicBool>,
 }
 
 impl Summarizer {
-    /// Build a summarizer, detecting the provider from the environment and
-    /// logging the outcome once.
-    pub fn new(enabled: bool) -> Self {
-        let config = AiSummaryConfig::from_env(enabled);
-        if enabled {
-            match config.provider {
-                Some(provider) => info!(
-                    provider = provider.label(),
-                    "AI summaries enabled; live provider summaries arrive in Phase 5, using templated summaries for now"
-                ),
-                None => info!(
-                    "AI summaries enabled but no provider configured; set ANTHROPIC_API_KEY, OPENAI_API_KEY, or RUSTYDEPS_AI_ENDPOINT (templated summaries are used until Phase 5)"
-                ),
+    /// Resolve configuration from the files, environment, and CLI overrides.
+    pub fn from_overrides(overrides: &AiOverrides) -> Self {
+        match config::load(overrides) {
+            Ok(loaded) => Self::from_settings(loaded.settings, loaded.source),
+            Err(error) => {
+                warn!(
+                    %error,
+                    "AI configuration could not be loaded; AI analysis is disabled for this scan"
+                );
+                Self::disabled()
             }
         }
-        Self { config }
     }
 
-    /// Build a summarizer from an explicit configuration (used by tests).
-    #[cfg(test)]
-    pub fn from_config(config: AiSummaryConfig) -> Self {
-        Self { config }
+    /// Build from already-resolved settings.
+    pub fn from_settings(settings: AiSettings, source: Option<PathBuf>) -> Self {
+        if !settings.enabled {
+            info!("AI analysis is disabled (enable it in the config or pass --ai)");
+            return Self::disabled();
+        }
+
+        if settings.provider.requires_api_key() && settings.api_key.is_none() {
+            warn!(
+                provider = settings.provider.label(),
+                "AI analysis is enabled but no API key is configured; skipping AI analysis"
+            );
+            return Self {
+                client: None,
+                cache: SummaryCache::new(settings.cache_enabled),
+                enabled: false,
+                provider: Some(settings.provider),
+                model: Some(settings.model),
+                stop: Arc::new(AtomicBool::new(false)),
+            };
+        }
+
+        match AiClient::new(settings.clone()) {
+            Ok(client) => {
+                if let Some(path) = &source {
+                    info!(config = %path.display(), "loaded the AI configuration");
+                }
+                info!(
+                    provider = settings.provider.label(),
+                    model = %settings.model,
+                    endpoint = %settings.endpoint,
+                    cache = settings.cache_enabled,
+                    "per-library AI analysis enabled"
+                );
+                Self {
+                    client: Some(client),
+                    cache: SummaryCache::new(settings.cache_enabled),
+                    enabled: true,
+                    provider: Some(settings.provider),
+                    model: Some(settings.model),
+                    stop: Arc::new(AtomicBool::new(false)),
+                }
+            }
+            Err(error) => {
+                warn!(
+                    %error,
+                    "could not build the AI client; AI analysis is disabled for this scan"
+                );
+                Self {
+                    client: None,
+                    cache: SummaryCache::new(settings.cache_enabled),
+                    enabled: false,
+                    provider: Some(settings.provider),
+                    model: Some(settings.model),
+                    stop: Arc::new(AtomicBool::new(false)),
+                }
+            }
+        }
     }
 
-    /// Whether `--ai` was requested.
+    /// A summarizer that does nothing.
+    pub fn disabled() -> Self {
+        Self {
+            client: None,
+            cache: SummaryCache::new(false),
+            enabled: false,
+            provider: None,
+            model: None,
+            stop: Arc::new(AtomicBool::new(false)),
+        }
+    }
+
+    /// Whether per-library analysis will run.
     pub fn is_enabled(&self) -> bool {
-        self.config.enabled
+        self.enabled && self.client.is_some()
     }
 
-    /// The detected provider, if any.
+    /// The selected provider, when one was configured.
     pub fn provider(&self) -> Option<AiProvider> {
-        self.config.provider
+        self.provider
     }
 
-    /// The summary for `update_type`, or `None` when none is worthwhile.
-    pub fn summarize(&self, update_type: UpdateType) -> Option<String> {
-        fallback_summary(update_type).map(str::to_string)
+    /// Analyze every outdated, registry-resolved dependency in place.
+    pub async fn summarize_all(&self, dependencies: &mut [ClassifiedDependency]) {
+        if !self.is_enabled() {
+            return;
+        }
+
+        let tasks = dependencies
+            .iter_mut()
+            .filter(|dependency| needs_analysis(dependency))
+            .map(|dependency| self.analyze(dependency));
+
+        stream::iter(tasks)
+            .buffer_unordered(MAX_CONCURRENCY)
+            .for_each(|_| async {})
+            .await;
     }
+
+    /// Analyze one package upgrade, preferring the local cache.
+    async fn analyze(&self, dependency: &mut ClassifiedDependency) {
+        let Some(target) = dependency.latest_version.clone() else {
+            return;
+        };
+        let ecosystem = dependency.ecosystem;
+        let package = dependency.name.as_str();
+
+        if let Some(cached) = self.cache.load(ecosystem, package, &target) {
+            debug!(package, target = %target, "using the cached AI analysis");
+            dependency.ai_summary = Some(cached.summary);
+            dependency.ai_cached = true;
+            return;
+        }
+
+        let Some(client) = &self.client else {
+            return;
+        };
+
+        // Cached analyses above are free; only the network calls stop.
+        if self.stop.load(Ordering::Relaxed) {
+            return;
+        }
+
+        let context = UpgradeContext::new(ecosystem, package, &dependency.current_version, &target);
+
+        match client.complete(SYSTEM_PROMPT, &user_prompt(&context)).await {
+            Ok(summary) if !summary.trim().is_empty() => {
+                dependency.ai_summary = Some(summary.clone());
+                dependency.ai_cached = false;
+
+                let entry = CachedSummary {
+                    ecosystem,
+                    package: package.to_string(),
+                    target_version: target.clone(),
+                    model: self.model.clone().unwrap_or_default(),
+                    summary,
+                    created_at: now_unix_seconds(),
+                };
+                if let Err(error) = self.cache.store(&entry) {
+                    warn!(package, %error, "could not write the AI summary cache");
+                }
+            }
+            Ok(_) => warn!(
+                package,
+                target = %target,
+                "AI provider returned an empty analysis; continuing without a summary"
+            ),
+            Err(error) if error.is_fatal() => {
+                if !self.stop.swap(true, Ordering::Relaxed) {
+                    warn!(
+                        %error,
+                        "AI provider rejected further requests; skipping the remaining analyses for this scan"
+                    );
+                } else {
+                    debug!(
+                        package,
+                        target = %target,
+                        %error,
+                        "skipping AI analysis after a fatal provider error"
+                    );
+                }
+            }
+            Err(error) => warn!(
+                package,
+                target = %target,
+                %error,
+                "AI analysis unavailable; continuing without a summary"
+            ),
+        }
+    }
+}
+
+/// Only outdated packages with a resolved target are worth a request.
+fn needs_analysis(dependency: &ClassifiedDependency) -> bool {
+    dependency.latest_version.is_some() && dependency.update_type.is_update()
 }
 
 #[cfg(test)]
 mod tests {
+    use std::path::PathBuf;
+
     use super::*;
+    use crate::model::{Ecosystem, UpdateType};
 
-    #[test]
-    fn only_at_risk_and_breaking_get_summaries() {
-        assert!(fallback_summary(UpdateType::Breaking).is_some());
-        assert!(fallback_summary(UpdateType::AtRisk).is_some());
-        assert!(fallback_summary(UpdateType::Safe).is_none());
-        assert!(fallback_summary(UpdateType::UpToDate).is_none());
-        assert!(fallback_summary(UpdateType::Unknown).is_none());
+    fn dependency(update_type: UpdateType, latest: Option<&str>) -> ClassifiedDependency {
+        ClassifiedDependency {
+            name: "tokio".to_string(),
+            ecosystem: Ecosystem::Cargo,
+            current_version: "1.20.0".to_string(),
+            latest_version: latest.map(str::to_string),
+            update_type,
+            manifest_path: PathBuf::from("Cargo.toml"),
+            is_dev_dependency: false,
+            ai_summary: None,
+            ai_cached: false,
+        }
     }
 
-    #[test]
-    fn summarize_returns_a_templated_line() {
-        let summarizer = Summarizer::from_config(AiSummaryConfig {
-            enabled: false,
-            provider: None,
-        });
-
-        let summary = summarizer
-            .summarize(UpdateType::Breaking)
-            .expect("breaking summary");
-        assert!(summary.contains("breaking"));
-        assert!(summarizer.summarize(UpdateType::Safe).is_none());
-    }
-
-    #[test]
-    fn a_configured_provider_still_falls_back_until_phase_5() {
-        let summarizer = Summarizer::from_config(AiSummaryConfig {
+    fn cache_only_summarizer(root: PathBuf) -> Summarizer {
+        Summarizer {
+            client: None,
+            cache: SummaryCache::with_root(true, root),
             enabled: true,
-            provider: Some(AiProvider::Anthropic),
-        });
+            provider: Some(AiProvider::Openai),
+            model: Some("test-model".to_string()),
+            stop: Arc::new(AtomicBool::new(false)),
+        }
+    }
 
-        assert!(summarizer.is_enabled());
-        assert_eq!(summarizer.provider(), Some(AiProvider::Anthropic));
-        assert!(summarizer.summarize(UpdateType::AtRisk).is_some());
+    #[test]
+    fn only_outdated_resolved_packages_are_analyzed() {
+        assert!(needs_analysis(&dependency(
+            UpdateType::Breaking,
+            Some("2.0.0")
+        )));
+        assert!(needs_analysis(&dependency(
+            UpdateType::AtRisk,
+            Some("1.30.0")
+        )));
+        assert!(needs_analysis(&dependency(
+            UpdateType::Safe,
+            Some("1.20.1")
+        )));
+        assert!(!needs_analysis(&dependency(
+            UpdateType::UpToDate,
+            Some("1.20.0")
+        )));
+        assert!(!needs_analysis(&dependency(UpdateType::Unknown, None)));
+    }
+
+    #[tokio::test]
+    async fn a_disabled_summarizer_leaves_summaries_empty() {
+        let mut dependency = dependency(UpdateType::Breaking, Some("2.0.0"));
+        Summarizer::disabled()
+            .summarize_all(std::slice::from_mut(&mut dependency))
+            .await;
+
+        assert!(dependency.ai_summary.is_none());
+        assert!(!dependency.ai_cached);
+    }
+
+    #[tokio::test]
+    async fn cached_analyses_are_applied_without_a_client() {
+        let directory = tempfile::tempdir().expect("tempdir");
+        let summarizer = cache_only_summarizer(directory.path().to_path_buf());
+        summarizer
+            .cache
+            .store(&CachedSummary {
+                ecosystem: Ecosystem::Cargo,
+                package: "tokio".to_string(),
+                target_version: "2.0.0".to_string(),
+                model: "test-model".to_string(),
+                summary: "### 🚨 Breaking Changes\nUse `tokio::runtime`.".to_string(),
+                created_at: now_unix_seconds(),
+            })
+            .expect("store cache");
+
+        let mut dependency = dependency(UpdateType::Breaking, Some("2.0.0"));
+        summarizer.analyze(&mut dependency).await;
+
+        assert_eq!(
+            dependency.ai_summary.as_deref(),
+            Some("### 🚨 Breaking Changes\nUse `tokio::runtime`.")
+        );
+        assert!(dependency.ai_cached);
     }
 }
