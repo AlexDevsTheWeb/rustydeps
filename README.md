@@ -159,6 +159,7 @@ Options:
       --ai-provider <PROVIDER>
                         openai | gemini | openrouter | ollama | custom
       --ai-endpoint <URL> Override the configured AI base URL
+      --no-cache        Ignore cached AI analyses and regenerate them
   -o, --output <PATH>   Report output path (default: rustydeps-report.html)
       --format <FORMAT> html | json (default: html)
       --offline         Skip registry lookups (alias: --no-fetch)
@@ -166,6 +167,8 @@ Options:
   -v, --verbose         Verbose (debug) logging
   -h, --help            Print help
   -V, --version         Print version
+
+rustydeps cache clear   Delete every cached AI changelog entry
 ```
 
 ## AI changelog summaries (BYOK)
@@ -181,12 +184,21 @@ on disk.
   because it may contain a key.
 - **Cache:** `~/.cache/rustydeps/changelogs/{ecosystem}_{package}_{target_version}.json`
   (`%LOCALAPPDATA%\rustydeps\changelogs\` on Windows). A repeat scan of the same
-  package version makes no request and costs no tokens — delete the directory to
-  force fresh analyses.
+  package version makes no request and costs no tokens. Run
+  `rustydeps cache clear` to delete every entry (it prints
+  `✔ Cleared X cached AI changelog entries.`), or pass `--no-cache` to ignore
+  cached reads for one scan and regenerate every analysis; fresh results still
+  refresh the cache. The report badge names the model that produced a cached
+  entry, for example `⚡ Cached (llama3.2:3b)`.
 - **Request scope:** only outdated, registry-resolved packages are analyzed, at
   most four concurrently, with a 45-second timeout per request. The generated
   Markdown appears in the package drawer; every failure degrades gracefully to
   the standard changelog link.
+- **Ollama preflight:** before analyzing, an Ollama run probes
+  `http://localhost:11434/api/tags` with a 1-second timeout. If the daemon is
+  offline, one warning explains how to start it (`ollama serve` or
+  `brew services start ollama`) and no package-level requests are attempted;
+  cached analyses are still applied.
 
 ### Supported providers
 
@@ -318,6 +330,7 @@ Native key fallbacks: `OPENAI_API_KEY`, `GEMINI_API_KEY` (or
 | `--ai-model <MODEL>` | Override the configured model for this scan |
 | `--ai-provider <PROVIDER>` | Override the provider; also resets model/endpoint to its defaults unless given explicitly |
 | `--ai-endpoint <URL>` | Override the configured base URL or full chat-completions URL |
+| `--no-cache` | Ignore cached analyses for this scan and regenerate them |
 
 Only dependencies with an available upgrade are analyzed. Up-to-date packages
 never consume a request, and their report drawers show a plain status card
