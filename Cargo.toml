@@ -1,6 +1,6 @@
 [package]
 name = "rustydeps"
-version = "0.3.0-dev"
+version = "0.3.1-dev"
 edition = "2021"
 description = "Fast, cross-platform CLI that scans local repositories for dependency manifests and reports available upgrades."
 license = "MIT OR Apache-2.0"
@@ -31,3 +31,4 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 
 [dev-dependencies]
 tempfile = "3"
+wiremock = "0.6"

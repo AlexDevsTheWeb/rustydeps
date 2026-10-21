@@ -25,6 +25,22 @@ pub struct Cli {
 pub enum Command {
     /// Walk a directory tree and list every supported dependency manifest.
     Scan(ScanArgs),
+    /// Manage the local AI summary cache.
+    Cache(CacheArgs),
+}
+
+/// Arguments for the `cache` subcommand.
+#[derive(Debug, Args)]
+pub struct CacheArgs {
+    #[command(subcommand)]
+    pub action: CacheCommand,
+}
+
+/// Cache maintenance actions.
+#[derive(Debug, Subcommand)]
+pub enum CacheCommand {
+    /// Delete every cached AI changelog entry.
+    Clear,
 }
 
 /// Arguments for the `scan` subcommand.
@@ -58,6 +74,10 @@ pub struct ScanArgs {
     /// URL).
     #[arg(long, value_name = "URL")]
     pub ai_endpoint: Option<String>,
+
+    /// Ignore cached AI analyses for this scan and regenerate them.
+    #[arg(long)]
+    pub no_cache: bool,
 
     /// Path for the generated HTML report (used with `--format html`).
     #[arg(short, long, default_value = "rustydeps-report.html")]
@@ -98,6 +118,7 @@ mod tests {
         let cli = Cli::try_parse_from(["rustydeps", "scan"]).expect("parse");
         match cli.command {
             Command::Scan(args) => assert!(!args.no_open),
+            Command::Cache(_) => panic!("expected scan"),
         }
     }
 
@@ -106,6 +127,7 @@ mod tests {
         let cli = Cli::try_parse_from(["rustydeps", "scan", "--no-open"]).expect("parse");
         match cli.command {
             Command::Scan(args) => assert!(args.no_open),
+            Command::Cache(_) => panic!("expected scan"),
         }
     }
 
@@ -134,6 +156,7 @@ mod tests {
                     Some("http://localhost:11434/v1")
                 );
             }
+            Command::Cache(_) => panic!("expected scan"),
         }
     }
 
@@ -142,6 +165,25 @@ mod tests {
         let cli = Cli::try_parse_from(["rustydeps", "scan", "--no-ai"]).expect("parse");
         match cli.command {
             Command::Scan(args) => assert!(args.no_ai),
+            Command::Cache(_) => panic!("expected scan"),
+        }
+    }
+
+    #[test]
+    fn no_cache_is_available_as_a_flag() {
+        let cli = Cli::try_parse_from(["rustydeps", "scan", "--no-cache"]).expect("parse");
+        match cli.command {
+            Command::Scan(args) => assert!(args.no_cache),
+            Command::Cache(_) => panic!("expected scan"),
+        }
+    }
+
+    #[test]
+    fn parses_cache_clear() {
+        let cli = Cli::try_parse_from(["rustydeps", "cache", "clear"]).expect("parse");
+        match cli.command {
+            Command::Cache(args) => assert!(matches!(args.action, CacheCommand::Clear)),
+            Command::Scan(_) => panic!("expected cache"),
         }
     }
 }

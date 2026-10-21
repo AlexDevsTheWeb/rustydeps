@@ -173,6 +173,9 @@ pub struct AiOverrides {
     pub provider: Option<AiProvider>,
     /// `--ai-endpoint`: override the configured base URL.
     pub endpoint: Option<String>,
+    /// `--no-cache`: bypass cached reads for this run; fresh results still
+    /// refresh the cache when it is enabled.
+    pub no_cache: bool,
 }
 
 /// Fully resolved settings for one run.
@@ -192,6 +195,9 @@ pub struct AiSettings {
     pub max_tokens: u32,
     /// Whether the local summary cache is enabled.
     pub cache_enabled: bool,
+    /// Whether cached reads are bypassed for this run (fresh analyses still
+    /// update the cache when it is enabled).
+    pub force_refresh: bool,
 }
 
 /// Resolved configuration plus the file it came from, when one was read.
@@ -367,6 +373,7 @@ fn resolve(ai: AiConfig, overrides: &AiOverrides) -> AiSettings {
         endpoint,
         max_tokens: ai.max_tokens.clamp(1, MAX_MAX_TOKENS),
         cache_enabled: ai.cache_enabled,
+        force_refresh: overrides.no_cache,
     }
 }
 
@@ -526,6 +533,23 @@ mod tests {
         assert_eq!(settings.provider, AiProvider::Ollama);
         assert_eq!(settings.model, AiProvider::Ollama.default_model());
         assert_eq!(settings.endpoint, AiProvider::Ollama.default_endpoint());
+    }
+
+    #[test]
+    fn no_cache_forces_a_refresh_but_keeps_writes_enabled() {
+        let config = AiConfig {
+            enabled: true,
+            cache_enabled: true,
+            ..AiConfig::default()
+        };
+        let overrides = AiOverrides {
+            no_cache: true,
+            ..AiOverrides::default()
+        };
+
+        let settings = resolve(config, &overrides);
+        assert!(settings.force_refresh);
+        assert!(settings.cache_enabled);
     }
 
     #[test]

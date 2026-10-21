@@ -61,6 +61,8 @@ pub struct DependencyReport {
     pub ai_enabled: bool,
     /// Whether the AI analysis came from the local cache.
     pub ai_cached: bool,
+    /// Model that produced the cached analysis (`unknown` when unavailable).
+    pub ai_model: String,
     /// Safe HTML rendering of the AI Markdown analysis (empty without AI).
     pub ai_analysis_html: String,
     /// One-line insight shown in the row.
@@ -217,6 +219,10 @@ impl ReportData {
                     ai_applicable,
                     ai_enabled: meta.ai_enabled,
                     ai_cached: has_ai_analysis && dependency.ai_cached,
+                    ai_model: dependency
+                        .ai_model
+                        .clone()
+                        .unwrap_or_else(|| "unknown".to_string()),
                     ai_analysis_html,
                     insight: insight.clone(),
                     changelog_url: changelog_url(dependency.ecosystem, &dependency.name),

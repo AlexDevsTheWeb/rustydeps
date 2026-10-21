@@ -110,6 +110,32 @@ impl SummaryCache {
             .map_err(|error| std::io::Error::new(std::io::ErrorKind::InvalidData, error))?;
         fs::write(path, json)
     }
+
+    /// Delete every cached entry and return how many files were removed.
+    ///
+    /// A missing cache directory is not an error; it simply yields zero.
+    pub fn clear(&self) -> std::io::Result<usize> {
+        let Some(root) = &self.root else {
+            return Ok(0);
+        };
+
+        let entries = match fs::read_dir(root) {
+            Ok(entries) => entries,
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(0),
+            Err(error) => return Err(error),
+        };
+
+        let mut removed = 0;
+        for entry in entries {
+            let entry = entry?;
+            let path = entry.path();
+            if path.is_file() {
+                fs::remove_file(path)?;
+                removed += 1;
+            }
+        }
+        Ok(removed)
+    }
 }
 
 /// Filesystem-safe cache key: `{ecosystem}_{package}_{target_version}`.
@@ -234,5 +260,32 @@ mod tests {
             .expect("read_dir")
             .next()
             .is_none());
+    }
+
+    #[test]
+    fn clear_removes_every_cached_file_and_counts_them() {
+        let directory = tempfile::tempdir().expect("tempdir");
+        let cache = SummaryCache::with_root(true, directory.path().to_path_buf());
+        cache.store(&cached()).expect("store first");
+
+        let mut second = cached();
+        second.package = "serde".to_string();
+        cache.store(&second).expect("store second");
+
+        assert_eq!(cache.clear().expect("clear"), 2);
+        assert!(fs::read_dir(directory.path())
+            .expect("read_dir")
+            .next()
+            .is_none());
+        assert_eq!(cache.clear().expect("clear empty"), 0);
+    }
+
+    #[test]
+    fn clear_of_a_missing_directory_is_zero() {
+        let directory = tempfile::tempdir().expect("tempdir");
+        let missing = directory.path().join("does-not-exist");
+        let cache = SummaryCache::with_root(true, missing);
+
+        assert_eq!(cache.clear().expect("clear"), 0);
     }
 }

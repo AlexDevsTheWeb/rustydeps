@@ -1289,7 +1289,7 @@
 <div class="drawer-section-title">
 <span>{% if dep.has_ai_analysis || (dep.ai_applicable && dep.ai_enabled) %}🤖 AI Library Release Analysis{% else %}📦 Dependency Status{% endif %}</span>
 {% if dep.has_bump_badge %}<span class="semver-badge">{{ dep.bump_label }}</span>{% endif %}
-{% if dep.ai_cached %}<span class="ai-cache-badge">⚡ Cached analysis</span>{% endif %}
+{% if dep.ai_cached %}<span class="ai-cache-badge">⚡ Cached ({{ dep.ai_model }})</span>{% endif %}
 </div>
 {% if dep.has_ai_analysis %}
 <div class="ai-analysis">{{ dep.ai_analysis_html|safe }}</div>
