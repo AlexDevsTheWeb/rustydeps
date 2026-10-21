@@ -64,6 +64,11 @@ the model behind each cached badge, and `wiremock` integration tests cover the
   21 analyses from cache without chat calls.
 - OKF validator — PASSED.
 
+## Merge request
+
+Draft PR [#31](https://github.com/AlexDevsTheWeb/rustydeps/pull/31)
+(`feat/v0.3.1-surgical-fixes` → `development`).
+
 ## Technical debt
 
 - The Ollama probe is hard-coded to the daemon root even for custom Ollama

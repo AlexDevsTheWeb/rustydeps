@@ -680,3 +680,11 @@ Validation: `cargo fmt --all --check` clean; `cargo clippy --all-targets --
 `cargo build --release` success; isolated `cache clear` removed two seeded
 entries; `scan ~/CODE/CES/babette --no-cache` regenerated 21 analyses with 0
 cache hits. OKF validation recorded in the development report.
+
+## 2026-10-21 — v0.3.1 draft PR opened
+
+Opened draft PR [#31](https://github.com/AlexDevsTheWeb/rustydeps/pull/31)
+(`feat/v0.3.1-surgical-fixes` → `development`) and recorded the link in the
+implementation report's MR section.
+
+Validation: OKF validator PASSED (0 errors, 0 warnings).
