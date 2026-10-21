@@ -156,6 +156,9 @@ Options:
       --ai              Enable per-library AI changelog summaries
       --no-ai           Disable AI summaries even when the config enables them
       --ai-model <MODEL> Override the configured AI model
+      --ai-provider <PROVIDER>
+                        openai | gemini | openrouter | ollama | custom
+      --ai-endpoint <URL> Override the configured AI base URL
   -o, --output <PATH>   Report output path (default: rustydeps-report.html)
       --format <FORMAT> html | json (default: html)
       --offline         Skip registry lookups (alias: --no-fetch)
@@ -200,6 +203,13 @@ both. The endpoint validator accepts a bare origin (`https://api.openai.com`), a
 provider base (`.../v1`, `.../v1beta/openai`), or a full
 `.../chat/completions` URL, with or without a trailing slash. Existing query
 strings are preserved.
+
+> **Free and quota-free:** Ollama runs the model on your machine, so it needs no
+> account, no key, no network, and has no quota. Switch to it for one scan with
+> `--ai --ai-provider ollama` (the provider switch resets the model and endpoint
+> to Ollama defaults), or persist it in the config as shown below. A failing
+> hosted provider is stopped after the first authentication/quota/model error, so
+> a scan never floods the console with one warning per package.
 
 ### Copy-paste configuration
 
@@ -253,15 +263,17 @@ its catalogue can be named, and `openrouter/auto` lets OpenRouter choose:
 }
 ```
 
-**Ollama (100% free, local and offline)** — start the server
-(`ollama serve`) and pull a model (`ollama pull llama3.1`) first:
+**Ollama (100% free, local and offline)** — install Ollama, start the server
+(`brew services start ollama`, or `ollama serve`), and pull a model
+(`ollama pull llama3.2:3b`) first:
 
 ```json
 {
   "ai": {
     "enabled": true,
     "provider": "ollama",
-    "model": "llama3.1"
+    "model": "llama3.2:3b",
+    "endpoint": "http://localhost:11434/v1"
   }
 }
 ```
@@ -304,6 +316,12 @@ Native key fallbacks: `OPENAI_API_KEY`, `GEMINI_API_KEY` (or
 | `--ai` | Force AI summaries on for this scan |
 | `--no-ai` | Force AI summaries off; wins over `--ai` and the config |
 | `--ai-model <MODEL>` | Override the configured model for this scan |
+| `--ai-provider <PROVIDER>` | Override the provider; also resets model/endpoint to its defaults unless given explicitly |
+| `--ai-endpoint <URL>` | Override the configured base URL or full chat-completions URL |
+
+Only dependencies with an available upgrade are analyzed. Up-to-date packages
+never consume a request, and their report drawers show a plain status card
+instead of an "AI analysis unavailable" notice.
 
 If a provider call fails, the warning names the resolved request URL, the HTTP
 status, and a compact snippet of the response body, for example

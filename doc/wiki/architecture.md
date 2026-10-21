@@ -6,7 +6,7 @@ status: active
 version: 0.3.0
 license: CC-BY-4.0
 created: 2026-10-14
-updated: 2026-10-20
+updated: 2026-10-21
 tags: [architecture, rust, cli, dto]
 ---
 
@@ -38,7 +38,8 @@ CLI (clap)
 ### CLI (`src/cli.rs`, `src/main.rs`)
 
 Built with `clap` (derive pattern). The `scan` subcommand takes a root `path`
-(default `.`), `--ai`, `--no-ai`, `--ai-model <MODEL>`, `--output`/`-o` (default
+(default `.`), `--ai`, `--no-ai`, `--ai-model <MODEL>`,
+`--ai-provider <PROVIDER>`, `--ai-endpoint <URL>`, `--output`/`-o` (default
 `rustydeps-report.html`), `--format html|json`, `--offline`/`--no-fetch`,
 `--no-open`, and `--verbose`/`-v`.
 `main` is `#[tokio::main]` and returns `anyhow::Result`; it initializes
@@ -174,9 +175,11 @@ carry a copyable per-ecosystem update command and each project exposes an
 "Update All" command in its expanded body. Cards render collapsed by default.
 When an AI analysis exists, the drawer renders the Markdown briefing in a
 **🤖 AI Library Release Analysis** card, with a `⚡ Cached analysis` badge on a
-cache hit; otherwise it shows the generic insight, an "AI analysis unavailable"
-note, and a standard package-changelog anchor. Anchors are the only external
-URLs in the document; CSS, JavaScript, the logo, and the favicon remain inline.
+cache hit. Only rows with an available upgrade are eligible: an up-to-date or
+unknown row renders a **📦 Dependency Status** card with no "AI analysis
+unavailable" notice, while an eligible row without a summary shows the generic
+insight and the package-changelog anchor. Anchors are the only external URLs in
+the document; CSS, JavaScript, the logo, and the favicon remain inline.
 See [[phase-4-html-report]]; the template design (palette, project-centric
 component hierarchy, risk indicators, inline drawer, filter/search, empty state)
 is fixed by [[html-report-spec]]. The card disclosure and row ordering are
@@ -191,11 +194,14 @@ image request), on a 12/13/14/16px scale. See [[ui-font-branding]].
 
 Optional and BYOK-configured (Milestone 0.3.0, hardened by
 [[ai-provider-compat]]). `src/config/mod.rs` resolves settings in layers: CLI
-(`--ai`, `--no-ai`, `--ai-model`), `RUSTYDEPS_AI_*` environment variables,
+(`--ai`, `--no-ai`, `--ai-model`, `--ai-provider`, `--ai-endpoint`),
+`RUSTYDEPS_AI_*` environment variables,
 `~/.config/rustydeps/config.json` (XDG on Unix, `%APPDATA%` on Windows), then a
 project `.rustydeps.json` fallback when the user file is absent, then provider
-defaults. Malformed files or values disable AI for the run instead of failing
-the scan.
+defaults. A CLI provider switch also resets the model and endpoint to that
+provider's defaults unless they are given explicitly, so `--ai-provider ollama`
+cannot inherit a Gemini URL or model. Malformed files or values disable AI for
+the run instead of failing the scan.
 
 `AiProvider` covers OpenAI (`gpt-4o-mini` at `https://api.openai.com/v1`), Gemini
 (`gemini-3.5-flash` at the OpenAI-compatible
@@ -207,9 +213,13 @@ Gemini, and OpenRouter require keys; keys fall back to `OPENAI_API_KEY`,
 `GEMINI_API_KEY`/`GOOGLE_API_KEY`, and `OPENROUTER_API_KEY` respectively.
 
 `Summarizer` (`src/ai/summary.rs`) analyzes only `Safe`/`AtRisk`/`Breaking` rows
-with a resolved target. It checks `SummaryCache` first, then calls `AiClient`
-(`src/ai/client.rs`), an async `reqwest` chat-completions client with a
-10-second timeout, bounded to four concurrent packages. `chat_endpoint`
+with a resolved target. Up-to-date and unknown rows never reach the client. It
+checks `SummaryCache` first, then calls `AiClient` (`src/ai/client.rs`), an async
+`reqwest` chat-completions client with a 45-second timeout, bounded to four
+concurrent packages. A fatal provider error (401/402/403/404/429, a body
+mentioning quota, or a connection failure) trips a scan-local breaker: one
+warning is logged and the remaining packages are skipped, so a quota-exhausted
+key never floods the console. `chat_endpoint`
 normalizes each provider base URL — bare origins, `/v1` or `/v1beta` roots,
 trailing slashes, full `/chat/completions` URLs, and query strings all resolve to
 one valid endpoint — and OpenRouter requests add `HTTP-Referer`/`X-Title`

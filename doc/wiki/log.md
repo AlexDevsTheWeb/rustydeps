@@ -6,7 +6,7 @@ status: active
 version: 0.1.0
 license: CC-BY-4.0
 created: 2026-10-14
-updated: 2026-10-20
+updated: 2026-10-21
 tags: [log, history]
 ---
 
@@ -627,3 +627,29 @@ outdated package. OKF validator result recorded in the development report.
 
 
 
+## 2026-10-21 — Free local AI and honest report states
+
+Follow-up to the Gemini quota-exceeded warnings. AI requests are now limited to
+rows with an available upgrade, a fatal provider error trips a scan-local
+breaker (one warning instead of one per package), and the report no longer shows
+"AI analysis unavailable" on up-to-date or unknown rows.
+
+- `src/model.rs` — `UpdateType::is_update()` shared by the summarizer and report.
+- `src/ai/summary.rs` — upgrade-only gating and the fatal-error circuit breaker.
+- `src/ai/client.rs` — `AiClientError::is_fatal()` for auth/quota/model/connect
+  failures.
+- `src/config/mod.rs`, `src/cli.rs`, `src/main.rs` — `--ai-provider` and
+  `--ai-endpoint`; provider switches reset model/endpoint defaults.
+- `src/report/`, `templates/report.html` — `ai_applicable`/`ai_enabled` row
+  state; **📦 Dependency Status** for up-to-date and unknown rows.
+- `README.md`, [[architecture]], and new [[free-local-ai]] feature page plus
+  implementation report.
+
+Local environment: Ollama 0.40.7 installed and started, `llama3.2:3b` pulled,
+and `~/.config/rustydeps/config.json` switched to the Ollama provider (Gemini
+config backed up beside it).
+
+Validation: `cargo test --all-targets` 137 passed; `cargo clippy --all-targets
+-- -D warnings` clean; live scan of `~/CODE/CES/babette` produced 21 analyses
+(14 cached, 7 fresh from Ollama), 16 status cards, 0 unavailable notices, and no
+quota warnings. OKF validation recorded in the development report.

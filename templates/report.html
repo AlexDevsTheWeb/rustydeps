@@ -1287,7 +1287,7 @@
 <div class="drawer-grid">
 <div>
 <div class="drawer-section-title">
-<span>🤖 AI Library Release Analysis</span>
+<span>{% if dep.has_ai_analysis || (dep.ai_applicable && dep.ai_enabled) %}🤖 AI Library Release Analysis{% else %}📦 Dependency Status{% endif %}</span>
 {% if dep.has_bump_badge %}<span class="semver-badge">{{ dep.bump_label }}</span>{% endif %}
 {% if dep.ai_cached %}<span class="ai-cache-badge">⚡ Cached analysis</span>{% endif %}
 </div>
@@ -1297,7 +1297,9 @@
 <div class="drawer-summary-card">
 <div class="drawer-summary-title">{{ dep.drawer_title }}</div>
 <div class="drawer-summary-desc">{{ dep.drawer_desc }}</div>
-<div class="ai-unavailable">AI analysis unavailable — configure a provider to get a per-library breakdown.</div>
+{% if dep.ai_applicable && dep.ai_enabled %}
+<div class="ai-unavailable">AI analysis unavailable for this package; see the changelog link below.</div>
+{% endif %}
 </div>
 {% endif %}
 <div class="drawer-meta-links">

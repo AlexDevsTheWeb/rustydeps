@@ -59,6 +59,25 @@ pub enum AiClientError {
     Response(String),
 }
 
+impl AiClientError {
+    /// Whether retrying the same request for other packages cannot succeed.
+    ///
+    /// Authentication, quota, model-not-found, and connection failures are
+    /// configuration problems: one clear warning is enough, and the remaining
+    /// packages must not burn time or tokens. Status 429 is included because a
+    /// quota-exhausted account stays exhausted for the rest of the scan.
+    pub fn is_fatal(&self) -> bool {
+        match self {
+            Self::Status { status, body, .. } => {
+                matches!(*status, 401 | 402 | 403 | 404 | 429)
+                    || body.to_ascii_lowercase().contains("quota")
+            }
+            Self::Transport { source, .. } => source.is_connect(),
+            Self::Build(_) | Self::Configuration(_) | Self::Response(_) => true,
+        }
+    }
+}
+
 /// An async OpenAI-compatible client.
 #[derive(Clone)]
 pub struct AiClient {
@@ -603,6 +622,32 @@ mod tests {
         );
         assert_eq!(snippet(" \n\t ", ERROR_BODY_LIMIT), "<empty response body>");
         assert_eq!(snippet("aébc", 3), "aéb…");
+    }
+
+    #[test]
+    fn quota_and_auth_statuses_stop_the_scan() {
+        for status in [401, 402, 403, 404, 429] {
+            let error = AiClientError::Status {
+                url: "https://api.example/v1/chat/completions".to_string(),
+                status,
+                body: "denied".to_string(),
+            };
+            assert!(error.is_fatal(), "status {status}");
+        }
+
+        let quota_in_body = AiClientError::Status {
+            url: "https://api.example/v1/chat/completions".to_string(),
+            status: 400,
+            body: "You exceeded your current quota".to_string(),
+        };
+        assert!(quota_in_body.is_fatal());
+
+        let transient = AiClientError::Status {
+            url: "https://api.example/v1/chat/completions".to_string(),
+            status: 500,
+            body: "server error".to_string(),
+        };
+        assert!(!transient.is_fatal());
     }
 
     #[test]

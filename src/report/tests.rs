@@ -29,7 +29,17 @@ fn dependency(
 }
 
 fn render(dependencies: &[ClassifiedDependency]) -> String {
-    let data = ReportData::from_classified(dependencies, &ReportMeta::default());
+    render_with_ai(dependencies, false)
+}
+
+fn render_with_ai(dependencies: &[ClassifiedDependency], ai_enabled: bool) -> String {
+    let data = ReportData::from_classified(
+        dependencies,
+        &ReportMeta {
+            ai_enabled,
+            ..ReportMeta::default()
+        },
+    );
     data.render().expect("render report")
 }
 
@@ -417,6 +427,57 @@ fn marks_analyses_served_from_the_cache() {
 
 #[test]
 fn renders_a_standard_changelog_link_without_ai() {
+    let html = render_with_ai(
+        &[dependency(
+            Ecosystem::Npm,
+            "web-dashboard/package.json",
+            "express",
+            "^4.18.0",
+            Some("5.3.0"),
+            UpdateType::Breaking,
+        )],
+        true,
+    );
+
+    assert!(html.contains("AI analysis unavailable"));
+    assert!(html.contains("View package changelog"));
+    assert!(html.contains("https://www.npmjs.com/package/express?activeTab=versions"));
+    assert!(!html.contains("class=\"ai-analysis\""));
+}
+
+#[test]
+fn up_to_date_and_unknown_rows_never_advertise_ai() {
+    let html = render_with_ai(
+        &[
+            dependency(
+                Ecosystem::Cargo,
+                "backend-api/Cargo.toml",
+                "serde",
+                "1.0.229",
+                Some("1.0.229"),
+                UpdateType::UpToDate,
+            ),
+            dependency(
+                Ecosystem::Cargo,
+                "backend-api/Cargo.toml",
+                "tokio",
+                "1.35.1",
+                None,
+                UpdateType::Unknown,
+            ),
+        ],
+        true,
+    );
+
+    assert!(!html.contains("AI analysis unavailable"));
+    // Both rows render their status card without an AI heading.
+    assert!(html.contains("Already up to date"));
+    assert!(html.contains("No update data available"));
+    assert_eq!(html.matches("📦 Dependency Status").count(), 2);
+}
+
+#[test]
+fn disabled_ai_renders_no_unavailable_notice() {
     let html = render(&[dependency(
         Ecosystem::Npm,
         "web-dashboard/package.json",
@@ -426,10 +487,46 @@ fn renders_a_standard_changelog_link_without_ai() {
         UpdateType::Breaking,
     )]);
 
-    assert!(html.contains("AI analysis unavailable"));
+    assert!(!html.contains("AI analysis unavailable"));
+    assert!(html.contains("📦 Dependency Status"));
     assert!(html.contains("View package changelog"));
-    assert!(html.contains("https://www.npmjs.com/package/express?activeTab=versions"));
-    assert!(!html.contains("class=\"ai-analysis\""));
+}
+
+#[test]
+fn marks_only_upgradable_rows_as_ai_applicable() {
+    let dependencies = vec![
+        dependency(
+            Ecosystem::Cargo,
+            "backend-api/Cargo.toml",
+            "serde",
+            "1.0.229",
+            Some("1.0.229"),
+            UpdateType::UpToDate,
+        ),
+        dependency(
+            Ecosystem::Cargo,
+            "backend-api/Cargo.toml",
+            "tokio",
+            "1.35.1",
+            Some("1.40.0"),
+            UpdateType::Safe,
+        ),
+    ];
+
+    let data = ReportData::from_classified(
+        &dependencies,
+        &ReportMeta {
+            ai_enabled: true,
+            ..ReportMeta::default()
+        },
+    );
+    let rows = &data.projects[0].dependencies;
+    let serde = rows.iter().find(|row| row.name == "serde").expect("serde");
+    let tokio = rows.iter().find(|row| row.name == "tokio").expect("tokio");
+
+    assert!(!serde.ai_applicable);
+    assert!(tokio.ai_applicable);
+    assert!(tokio.ai_enabled);
 }
 
 #[test]
@@ -472,6 +569,7 @@ fn reports_an_empty_scan() {
 fn surfaces_the_scan_duration() {
     let meta = ReportMeta {
         scan_duration_ms: Some(142),
+        ai_enabled: false,
     };
     let data = ReportData::from_classified(&[], &meta);
 

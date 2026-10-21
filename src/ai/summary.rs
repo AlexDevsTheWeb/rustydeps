@@ -6,6 +6,8 @@
 //! scan.
 
 use std::path::PathBuf;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Arc;
 
 use futures::stream::{self, StreamExt};
 use tracing::{debug, info, warn};
@@ -15,7 +17,6 @@ use super::client::AiClient;
 use super::prompt::{user_prompt, UpgradeContext, SYSTEM_PROMPT};
 use crate::classifier::ClassifiedDependency;
 use crate::config::{self, AiOverrides, AiProvider, AiSettings};
-use crate::model::UpdateType;
 
 /// Maximum number of provider requests in flight at once.
 pub const MAX_CONCURRENCY: usize = 4;
@@ -28,6 +29,8 @@ pub struct Summarizer {
     enabled: bool,
     provider: Option<AiProvider>,
     model: Option<String>,
+    /// Set after a fatal provider error; stops the remaining requests.
+    stop: Arc<AtomicBool>,
 }
 
 impl Summarizer {
@@ -63,6 +66,7 @@ impl Summarizer {
                 enabled: false,
                 provider: Some(settings.provider),
                 model: Some(settings.model),
+                stop: Arc::new(AtomicBool::new(false)),
             };
         }
 
@@ -84,6 +88,7 @@ impl Summarizer {
                     enabled: true,
                     provider: Some(settings.provider),
                     model: Some(settings.model),
+                    stop: Arc::new(AtomicBool::new(false)),
                 }
             }
             Err(error) => {
@@ -97,6 +102,7 @@ impl Summarizer {
                     enabled: false,
                     provider: Some(settings.provider),
                     model: Some(settings.model),
+                    stop: Arc::new(AtomicBool::new(false)),
                 }
             }
         }
@@ -110,6 +116,7 @@ impl Summarizer {
             enabled: false,
             provider: None,
             model: None,
+            stop: Arc::new(AtomicBool::new(false)),
         }
     }
 
@@ -159,6 +166,11 @@ impl Summarizer {
             return;
         };
 
+        // Cached analyses above are free; only the network calls stop.
+        if self.stop.load(Ordering::Relaxed) {
+            return;
+        }
+
         let context = UpgradeContext::new(ecosystem, package, &dependency.current_version, &target);
 
         match client.complete(SYSTEM_PROMPT, &user_prompt(&context)).await {
@@ -183,6 +195,21 @@ impl Summarizer {
                 target = %target,
                 "AI provider returned an empty analysis; continuing without a summary"
             ),
+            Err(error) if error.is_fatal() => {
+                if !self.stop.swap(true, Ordering::Relaxed) {
+                    warn!(
+                        %error,
+                        "AI provider rejected further requests; skipping the remaining analyses for this scan"
+                    );
+                } else {
+                    debug!(
+                        package,
+                        target = %target,
+                        %error,
+                        "skipping AI analysis after a fatal provider error"
+                    );
+                }
+            }
             Err(error) => warn!(
                 package,
                 target = %target,
@@ -195,11 +222,7 @@ impl Summarizer {
 
 /// Only outdated packages with a resolved target are worth a request.
 fn needs_analysis(dependency: &ClassifiedDependency) -> bool {
-    dependency.latest_version.is_some()
-        && matches!(
-            dependency.update_type,
-            UpdateType::Breaking | UpdateType::AtRisk | UpdateType::Safe
-        )
+    dependency.latest_version.is_some() && dependency.update_type.is_update()
 }
 
 #[cfg(test)]
@@ -207,7 +230,7 @@ mod tests {
     use std::path::PathBuf;
 
     use super::*;
-    use crate::model::Ecosystem;
+    use crate::model::{Ecosystem, UpdateType};
 
     fn dependency(update_type: UpdateType, latest: Option<&str>) -> ClassifiedDependency {
         ClassifiedDependency {
@@ -230,6 +253,7 @@ mod tests {
             enabled: true,
             provider: Some(AiProvider::Openai),
             model: Some("test-model".to_string()),
+            stop: Arc::new(AtomicBool::new(false)),
         }
     }
 
