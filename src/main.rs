@@ -118,11 +118,8 @@ fn print_banner() {
     println!();
     println!(
         "{}",
-        " 🦀 Smart cross-registry dependency intelligence for Rust, Node & Python".truecolor(
-            LIGHT_GREY.0,
-            LIGHT_GREY.1,
-            LIGHT_GREY.2
-        )
+        " 🦀 Smart cross-registry dependency intelligence for Rust, Node, Python, Go & PHP"
+            .truecolor(LIGHT_GREY.0, LIGHT_GREY.1, LIGHT_GREY.2)
     );
     println!();
 }
