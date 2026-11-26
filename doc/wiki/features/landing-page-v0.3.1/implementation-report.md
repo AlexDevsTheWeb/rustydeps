@@ -53,6 +53,11 @@ truthful.
 - `cargo test` — 144 unit + 4 integration passed.
 - OKF validator — PASSED.
 
+## Merge request
+
+Draft PR [#32](https://github.com/AlexDevsTheWeb/rustydeps/pull/32)
+(`fix/landing-page-v0.3.1` → `development`).
+
 ## Technical debt
 
 - The page still depends on the Tailwind CDN and Google Fonts; it is not fully

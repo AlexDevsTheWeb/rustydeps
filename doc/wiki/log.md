@@ -710,3 +710,11 @@ copy controls wiring their exact commands; external links returned HTTP 200;
 `cargo fmt --all --check`, `cargo clippy --all-targets -- -D warnings`, and
 `cargo test` (144 unit + 4 integration) pass. OKF validation recorded in the
 development report.
+
+## 2026-11-26 — Landing page draft PR opened
+
+Opened draft PR [#32](https://github.com/AlexDevsTheWeb/rustydeps/pull/32)
+(`fix/landing-page-v0.3.1` → `development`) and recorded the link in the
+implementation report's merge-request section.
+
+Validation: OKF validator PASSED (0 errors, 0 warnings).
