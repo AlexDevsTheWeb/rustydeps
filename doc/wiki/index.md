@@ -3,10 +3,10 @@ title: "RustyDeps Wiki — Index"
 type: index
 description: "Entrypoint and knowledge-graph map for the RustyDeps LLM-Wiki."
 status: active
-version: 0.3.1
+version: 0.3.2
 license: CC-BY-4.0
 created: 2026-10-14
-updated: 2026-10-21
+updated: 2026-11-26
 tags: [index, rustydeps, llm-wiki]
 ---
 
@@ -47,6 +47,7 @@ and produces an interactive HTML report with optional AI changelog summaries.
 | [[ai-provider-compat]] | Provider-aware URL resolution for OpenAI, Gemini, OpenRouter, Ollama, and custom proxies; OpenRouter headers, request diagnostics with URL/status/body, and the full README BYOK guide; [implementation report](features/ai-provider-compat/implementation-report.md). |
 | [[free-local-ai]] | Quota-free Ollama summaries, `--ai-provider`/`--ai-endpoint`, upgrade-only AI requests, a fatal-error circuit breaker, and report drawers that omit the unavailable notice on up-to-date packages; [implementation report](features/free-local-ai/implementation-report.md). |
 | [[v0.3.1-surgical-fixes]] | `cache clear` and `--no-cache`, the 1-second Ollama preflight, cached-model report badges, and wiremock integration tests; [implementation report](features/v0.3.1-surgical-fixes/implementation-report.md). |
+| [[landing-page-v0.3.1]] | GitHub Pages refresh to v0.3.1: real Cargo/Docker installs, AI/Ollama/cache feature grid, terminal and report-drawer previews, plus a corrected CLI banner; [implementation report](features/landing-page-v0.3.1/implementation-report.md). |
 
 ## Source documents
 
@@ -85,6 +86,8 @@ and produces an interactive HTML report with optional AI changelog summaries.
 - `doc/raw/2026-10-21/2026-10-21-0.3.1.md` — v0.3.1 cache, Ollama preflight,
   report-badge, and integration-test brief implemented by
   [[v0.3.1-surgical-fixes]].
+- `doc/raw/2026-11-26/2026-11-26-update-landing-page.md` — the v0.3.1 landing
+  page refresh brief implemented by [[landing-page-v0.3.1]].
 
 ## Conventions
 
