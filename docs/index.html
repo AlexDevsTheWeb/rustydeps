@@ -3,8 +3,8 @@
 <html class="dark scroll-smooth" lang="en"><head>
 <meta charset="utf-8"/>
 <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-<meta content="Fast, parallel dependency scanning across Cargo, npm, PyPI, Go and Composer — SemVer risk classes, free local AI briefings, and one self-contained HTML report." name="description"/>
-<title>RustyDeps v0.3.1 — Dependency Intelligence with AI Briefings</title>
+<meta content="Fast, parallel dependency scanning across Cargo, npm, PyPI, Go and Composer — SemVer risk classes, official release-note grounding, free local AI briefings, and one self-contained HTML report." name="description"/>
+<title>RustyDeps v0.4.0 — Dependency Intelligence with AI Briefings</title>
 <!-- Tailwind CSS v3 with Forms & Container-Queries -->
 <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
 <!-- Tailwind Custom Configuration -->
@@ -88,7 +88,7 @@
 <span class="text-2xl transition-transform group-hover:scale-110">🦀</span>
 <span class="font-bold text-lg tracking-tight text-white group-hover:text-rust-400 transition-colors">RustyDeps</span>
 </a>
-<span class="hidden sm:inline-flex items-center px-2 py-0.5 rounded text-xs font-mono font-medium bg-[#18181b] text-rust-400 border border-rust-500/30">v0.3.1</span>
+<span class="hidden sm:inline-flex items-center px-2 py-0.5 rounded text-xs font-mono font-medium bg-[#18181b] text-rust-400 border border-rust-500/30">v0.4.0</span>
 </div>
 <!-- Navigation Links -->
 <nav class="hidden md:flex items-center space-x-8 text-sm font-medium text-zinc-400">
@@ -115,7 +115,7 @@
 <div class="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[300px] bg-gradient-to-tr from-rust-600/10 via-cyan-500/10 to-transparent blur-3xl pointer-events-none -z-10"></div>
 <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
 <div class="inline-flex flex-wrap items-center justify-center gap-2 mb-6 font-mono text-xs">
-<span class="px-2.5 py-1 rounded-md bg-[#18181b] border border-rust-500/30 text-rust-400 font-medium flex items-center gap-1.5"><span class="w-1.5 h-1.5 rounded-full bg-rust-500"></span>v0.3.1 · latest release</span>
+<span class="px-2.5 py-1 rounded-md bg-[#18181b] border border-rust-500/30 text-rust-400 font-medium flex items-center gap-1.5"><span class="w-1.5 h-1.5 rounded-full bg-rust-500"></span>v0.4.0 · latest release</span>
 <span class="px-2.5 py-1 rounded-md bg-[#18181b] border border-[#27272a] text-zinc-300">MIT / Apache-2.0</span>
 <span class="px-2.5 py-1 rounded-md bg-[#18181b] border border-[#27272a] text-zinc-300">Rust 2021</span>
 <span class="px-2.5 py-1 rounded-md bg-[#18181b] border border-[#27272a] text-emerald-400">Open Source</span>
@@ -126,9 +126,9 @@
 <div class="w-full max-w-4xl flex items-center justify-between bg-[#121215] border border-[#27272a] hover:border-[#3f3f46] rounded-xl p-1.5 pl-4 transition-all shadow-lg">
 <div class="flex items-center space-x-2 font-mono text-xs sm:text-sm text-zinc-300 mr-4 min-w-0">
 <span class="text-rust-500 select-none">$</span>
-<span class="break-words leading-snug text-left whitespace-normal text-[11px] sm:text-xs">cargo install --git https://github.com/AlexDevsTheWeb/rustydeps --tag v0.3.1</span>
+<span class="break-words leading-snug text-left whitespace-normal text-[11px] sm:text-xs">cargo install --git https://github.com/AlexDevsTheWeb/rustydeps --tag v0.4.0</span>
 </div>
-<button aria-label="Copy cargo install command" class="shrink-0 p-2 rounded-lg bg-[#18181b] hover:bg-[#27272a] text-zinc-300 hover:text-white transition-all text-xs flex items-center gap-1.5 border border-[#27272a]" data-copy="cargo install --git https://github.com/AlexDevsTheWeb/rustydeps --tag v0.3.1" onclick="copyFrom(this)">
+<button aria-label="Copy cargo install command" class="shrink-0 p-2 rounded-lg bg-[#18181b] hover:bg-[#27272a] text-zinc-300 hover:text-white transition-all text-xs flex items-center gap-1.5 border border-[#27272a]" data-copy="cargo install --git https://github.com/AlexDevsTheWeb/rustydeps --tag v0.4.0" onclick="copyFrom(this)">
 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
 <span class="font-sans font-medium text-xs">Copy</span>
 </button>
@@ -136,15 +136,15 @@
 <div class="w-full max-w-4xl flex items-center justify-between bg-[#121215] border border-[#27272a] hover:border-[#3f3f46] rounded-xl p-1.5 pl-4 transition-all shadow-lg">
 <div class="flex items-center space-x-2 font-mono text-xs sm:text-sm text-zinc-300 mr-4 min-w-0">
 <span class="text-cyanAccent-500 select-none">$</span>
-<span class="break-words leading-snug text-left whitespace-normal text-[11px] sm:text-xs">docker run --rm -v /path/to/repo:/workspace ghcr.io/alexdevstheweb/rustydeps:0.3.1</span>
+<span class="break-words leading-snug text-left whitespace-normal text-[11px] sm:text-xs">docker run --rm -v /path/to/repo:/workspace ghcr.io/alexdevstheweb/rustydeps:0.4.0</span>
 </div>
-<button aria-label="Copy docker run command" class="shrink-0 p-2 rounded-lg bg-[#18181b] hover:bg-[#27272a] text-zinc-300 hover:text-white transition-all text-xs flex items-center gap-1.5 border border-[#27272a]" data-copy="docker run --rm -v /path/to/repo:/workspace ghcr.io/alexdevstheweb/rustydeps:0.3.1" onclick="copyFrom(this)">
+<button aria-label="Copy docker run command" class="shrink-0 p-2 rounded-lg bg-[#18181b] hover:bg-[#27272a] text-zinc-300 hover:text-white transition-all text-xs flex items-center gap-1.5 border border-[#27272a]" data-copy="docker run --rm -v /path/to/repo:/workspace ghcr.io/alexdevstheweb/rustydeps:0.4.0" onclick="copyFrom(this)">
 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
 <span class="font-sans font-medium text-xs">Copy</span>
 </button>
 </div>
 <div class="flex flex-wrap items-center justify-center gap-3 pt-1">
-<a class="inline-flex items-center justify-center px-5 py-2.5 rounded-xl bg-rust-500 hover:bg-rust-400 text-[#09090b] text-xs sm:text-sm font-semibold transition-all shadow-lg shadow-rust-500/20" href="https://github.com/AlexDevsTheWeb/rustydeps/releases/tag/v0.3.1" rel="noreferrer" target="_blank">Release notes v0.3.1</a>
+<a class="inline-flex items-center justify-center px-5 py-2.5 rounded-xl bg-rust-500 hover:bg-rust-400 text-[#09090b] text-xs sm:text-sm font-semibold transition-all shadow-lg shadow-rust-500/20" href="https://github.com/AlexDevsTheWeb/rustydeps/releases/tag/v0.4.0" rel="noreferrer" target="_blank">Release notes v0.4.0</a>
 <a class="inline-flex items-center justify-center px-5 py-2.5 rounded-xl bg-[#18181b] border border-[#27272a] hover:border-zinc-500 text-zinc-200 text-xs sm:text-sm font-mono font-medium hover:text-white transition-all shadow-sm" href="https://github.com/AlexDevsTheWeb/rustydeps" rel="noreferrer" target="_blank">View on GitHub</a>
 </div>
 </div>
@@ -196,10 +196,10 @@
 <div class="w-10 h-10 rounded-lg bg-violet-500/10 border border-violet-500/20 flex items-center justify-center text-violet-400 mb-5">
 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
 </div>
-<h4 class="text-lg font-bold text-white mb-2">Per-Library AI Briefings</h4>
-<p class="text-sm text-zinc-400 leading-relaxed">Every outdated package gets its own Markdown analysis: breaking changes, security and CVE context, performance impact, and actionable migration advice — not a generic changelog dump.</p>
+<h4 class="text-lg font-bold text-white mb-2">Grounded Per-Library AI Briefings</h4>
+<p class="text-sm text-zinc-400 leading-relaxed">Every outdated package gets its own Markdown analysis — breaking changes, security and CVE context, performance impact, migration advice — grounded in the official GitHub release notes resolved from crates.io, npm, PyPI, Packagist, or Go module metadata.</p>
 </div>
-<div class="mt-6 pt-4 border-t border-[#27272a] text-xs font-mono text-zinc-500 flex items-center justify-between"><span>Output</span><span class="text-violet-400 font-semibold">4-section briefing</span></div>
+<div class="mt-6 pt-4 border-t border-[#27272a] text-xs font-mono text-zinc-500 flex items-center justify-between"><span>Grounding</span><span class="text-violet-400 font-semibold">official release notes</span></div>
 </div>
 <!-- 4 -->
 <div class="rounded-2xl border border-[#27272a] bg-[#121215] p-6 hover:border-zinc-700 transition-all flex flex-col justify-between">
@@ -219,7 +219,7 @@
 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M20.25 6.375c0 2.278-3.694 4.125-8.25 4.125S3.75 8.653 3.75 6.375m16.5 0c0-2.278-3.694-4.125-8.25-4.125S3.75 4.097 3.75 6.375m16.5 0v11.25c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125V6.375m16.5 0v3.75m-16.5-3.75v3.75m16.5 0v3.75C20.25 16.153 16.556 18 12 18s-8.25-1.847-8.25-4.125v-3.75" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
 </div>
 <h4 class="text-lg font-bold text-white mb-2">Disk Cache &amp; Circuit Breaker</h4>
-<p class="text-sm text-zinc-400 leading-relaxed">Analyses are cached per ecosystem, package and target version, so repeat scans cost zero tokens. Invalidate with <code class="text-zinc-300">--no-cache</code> or wipe with <code class="text-zinc-300">rustydeps cache clear</code>; auth, quota and model errors stop after the first failure.</p>
+<p class="text-sm text-zinc-400 leading-relaxed">Analyses are cached per ecosystem, package and target version, so repeat scans cost zero tokens. Entries carry <code class="text-zinc-300">CACHE_FORMAT_VERSION = 2</code>, so v0.3.x summaries regenerate once. Invalidate with <code class="text-zinc-300">--no-cache</code> or wipe with <code class="text-zinc-300">rustydeps cache clear</code>; auth, quota and model errors stop after the first failure.</p>
 </div>
 <div class="mt-6 pt-4 border-t border-[#27272a] text-xs font-mono text-zinc-500 flex items-center justify-between"><span>Repeat AI</span><span class="text-amber-400 font-semibold">0 tokens</span></div>
 </div>
@@ -248,6 +248,8 @@
 <p class="mt-4 text-zinc-400 leading-relaxed">Ollama runs the model on your hardware, so local summaries need no account, no key, and no network. Prefer a hosted model? Point RustyDeps at your own provider key — the binary calls it directly and caches the result on disk.</p>
 <ul class="mt-6 space-y-3 text-sm text-zinc-300">
 <li class="flex gap-3"><span class="text-emerald-400 font-mono">✔</span><span>Only outdated, registry-resolved packages are analysed — up-to-date drawers show a plain status card.</span></li>
+<li class="flex gap-3"><span class="text-emerald-400 font-mono">✔</span><span>Official release notes are resolved from crates.io, npm, PyPI, Packagist, or Go metadata and a 1,500-character GitHub excerpt becomes the prompt's primary source.</span></li>
+<li class="flex gap-3"><span class="text-emerald-400 font-mono">✔</span><span>Set <span class="font-mono text-xs bg-[#18181b] border border-[#27272a] rounded px-1.5 py-0.5 text-zinc-200">GITHUB_TOKEN</span> (or <span class="font-mono text-xs bg-[#18181b] border border-[#27272a] rounded px-1.5 py-0.5 text-zinc-200">GH_TOKEN</span>) to raise the GitHub API limit from 60 to 5,000 requests/hour; <span class="font-mono text-xs bg-[#18181b] border border-[#27272a] rounded px-1.5 py-0.5 text-zinc-200">--offline</span> skips release-note lookups.</span></li>
 <li class="flex gap-3"><span class="text-emerald-400 font-mono">✔</span><span>At most four concurrent requests with a 45-second timeout; a failure degrades to the standard changelog link.</span></li>
 <li class="flex gap-3"><span class="text-emerald-400 font-mono">✔</span><span>A one-second Ollama preflight warns once if the daemon is offline; cached briefings are still applied.</span></li>
 <li class="flex gap-3"><span class="text-emerald-400 font-mono">✔</span><span>The report names the model behind a cached briefing, for example <span class="font-mono text-xs bg-[#18181b] border border-[#27272a] rounded px-1.5 py-0.5 text-amber-300">⚡ Cached (llama3.2:3b)</span>.</span></li>
@@ -311,7 +313,7 @@
 </div>
 <div class="p-5 font-mono text-xs sm:text-sm text-zinc-300 leading-relaxed overflow-x-auto space-y-1.5 bg-[#09090b]">
 <div class="flex items-center space-x-2 text-zinc-500"><span class="text-rust-500">❯</span><span class="text-white font-semibold">rustydeps</span><span>scan .</span></div>
-<div class="pt-2 text-rust-400 font-bold tracking-wider">🦀 v0.3.1</div>
+<div class="pt-2 text-rust-400 font-bold tracking-wider">🦀 v0.4.0</div>
 <div class="text-zinc-500">🦀 Smart cross-registry dependency intelligence for Rust, Node, Python, Go &amp; PHP.</div>
 <div class="text-zinc-400">✔ Scanned <span class="text-zinc-200">'services/backend'</span>: 12 dependencies (Cargo)</div>
 <div class="text-zinc-400">✔ Scanned <span class="text-zinc-200">'apps/web'</span>: 34 dependencies (npm)</div>
@@ -410,7 +412,7 @@
 <span class="text-[11px] font-mono px-1.5 py-0.5 rounded bg-[#18181b] border border-amber-500/30 text-amber-300">⚡ Cached (llama3.2:3b)</span>
 </div>
 <div class="flex items-center gap-3 text-[11px] font-mono">
-<a class="text-cyanAccent-400 hover:text-cyanAccent-500" href="https://github.com/AlexDevsTheWeb/rustydeps/releases/tag/v0.3.1" rel="noreferrer" target="_blank">standard changelog ↗</a>
+<a class="text-cyanAccent-400 hover:text-cyanAccent-500" href="https://github.com/AlexDevsTheWeb/rustydeps/releases/tag/v0.4.0" rel="noreferrer" target="_blank">standard changelog ↗</a>
 <button class="px-2 py-1 rounded bg-[#18181b] border border-[#27272a] text-zinc-300 hover:text-white" data-copy="npm install @prisma/client@6.16.2" onclick="copyFrom(this)">copy upgrade</button>
 </div>
 </div>
@@ -442,22 +444,22 @@
 <div class="space-y-4 font-mono text-xs sm:text-sm">
 <!-- Step 1: install tabs -->
 <div class="rounded-xl border border-[#27272a] bg-[#121215] p-5">
-<div class="text-rust-400 font-semibold text-xs tracking-wider uppercase font-sans mb-3">Step 1 · Install v0.3.1</div>
+<div class="text-rust-400 font-semibold text-xs tracking-wider uppercase font-sans mb-3">Step 1 · Install v0.4.0</div>
 <div class="flex items-center gap-1 mb-4 border-b border-[#27272a]">
 <button class="install-tab-btn px-3 py-2 text-xs font-mono border-b-2 border-rust-500 text-white bg-[#121215] transition-colors" onclick="switchTab('cargo', this)">Cargo</button>
 <button class="install-tab-btn px-3 py-2 text-xs font-mono border-b-2 border-transparent text-zinc-400 hover:text-zinc-200 transition-colors" onclick="switchTab('docker', this)">Docker</button>
 </div>
 <div class="tab-content" id="tab-cargo">
 <div class="flex items-center justify-between gap-3">
-<code class="text-zinc-200 break-words min-w-0 flex-1">cargo install --git https://github.com/AlexDevsTheWeb/rustydeps --tag v0.3.1</code>
-<button class="shrink-0 px-3 py-1.5 rounded-lg bg-[#18181b] hover:bg-[#27272a] text-zinc-300 hover:text-white border border-[#27272a] text-xs transition-colors" data-copy="cargo install --git https://github.com/AlexDevsTheWeb/rustydeps --tag v0.3.1" onclick="copyFrom(this)">Copy</button>
+<code class="text-zinc-200 break-words min-w-0 flex-1">cargo install --git https://github.com/AlexDevsTheWeb/rustydeps --tag v0.4.0</code>
+<button class="shrink-0 px-3 py-1.5 rounded-lg bg-[#18181b] hover:bg-[#27272a] text-zinc-300 hover:text-white border border-[#27272a] text-xs transition-colors" data-copy="cargo install --git https://github.com/AlexDevsTheWeb/rustydeps --tag v0.4.0" onclick="copyFrom(this)">Copy</button>
 </div>
 <p class="mt-2 text-[11px] text-zinc-500 font-sans">Installs the tagged release, including the AI summarizer and cache commands.</p>
 </div>
 <div class="tab-content hidden" id="tab-docker">
 <div class="flex items-center justify-between gap-3">
-<code class="text-zinc-200 break-words min-w-0 flex-1">docker run --rm -v /path/to/repo:/workspace ghcr.io/alexdevstheweb/rustydeps:0.3.1</code>
-<button class="shrink-0 px-3 py-1.5 rounded-lg bg-[#18181b] hover:bg-[#27272a] text-zinc-300 hover:text-white border border-[#27272a] text-xs transition-colors" data-copy="docker run --rm -v /path/to/repo:/workspace ghcr.io/alexdevstheweb/rustydeps:0.3.1" onclick="copyFrom(this)">Copy</button>
+<code class="text-zinc-200 break-words min-w-0 flex-1">docker run --rm -v /path/to/repo:/workspace ghcr.io/alexdevstheweb/rustydeps:0.4.0</code>
+<button class="shrink-0 px-3 py-1.5 rounded-lg bg-[#18181b] hover:bg-[#27272a] text-zinc-300 hover:text-white border border-[#27272a] text-xs transition-colors" data-copy="docker run --rm -v /path/to/repo:/workspace ghcr.io/alexdevstheweb/rustydeps:0.4.0" onclick="copyFrom(this)">Copy</button>
 </div>
 <p class="mt-2 text-[11px] text-zinc-500 font-sans">Multi-arch Linux image (amd64 + arm64). The report lands in the mounted directory; add <code class="text-zinc-400">--no-open</code> for CI.</p>
 </div>
@@ -510,12 +512,12 @@
 <div class="flex flex-col md:flex-row items-center justify-between gap-6">
 <div class="flex items-center space-x-3 text-center md:text-left">
 <span class="text-xl">🦀</span>
-<div><div class="font-bold text-white text-sm">RustyDeps v0.3.1</div><div class="text-xs text-zinc-500 font-mono">Built with Rust for resilient, high-speed engineering pipelines.</div></div>
+<div><div class="font-bold text-white text-sm">RustyDeps v0.4.0</div><div class="text-xs text-zinc-500 font-mono">Built with Rust for resilient, high-speed engineering pipelines.</div></div>
 </div>
 <div class="flex flex-wrap items-center justify-center gap-6 text-xs font-mono text-zinc-400">
 <a class="hover:text-white transition-colors" href="https://github.com/AlexDevsTheWeb/rustydeps" rel="noreferrer" target="_blank">github.com/AlexDevsTheWeb/rustydeps</a>
 <span class="text-zinc-700">•</span>
-<a class="hover:text-white transition-colors" href="https://github.com/AlexDevsTheWeb/rustydeps/releases/tag/v0.3.1" rel="noreferrer" target="_blank">Release v0.3.1</a>
+<a class="hover:text-white transition-colors" href="https://github.com/AlexDevsTheWeb/rustydeps/releases/tag/v0.4.0" rel="noreferrer" target="_blank">Release v0.4.0</a>
 <span class="text-zinc-700">•</span>
 <a class="hover:text-white transition-colors" href="https://github.com/AlexDevsTheWeb/rustydeps/pkgs/container/rustydeps" rel="noreferrer" target="_blank">GHCR image</a>
 <span class="text-zinc-700">•</span>

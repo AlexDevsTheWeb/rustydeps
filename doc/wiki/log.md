@@ -795,3 +795,30 @@ Validation: OKF validator PASSED (0 errors, 0 warnings); `cargo fmt --all
 
 Opened draft PR [#33](https://github.com/AlexDevsTheWeb/rustydeps/pull/33)
 (`fix/readme-badges-v0.3.1` → `development`).
+
+## 2026-11-27 — README and landing page synced to v0.4.0
+
+Applied `doc/raw/2026-11-27/2026-11-27-v0.4.0.md` on
+`fix/v0.4.0-docs-and-readme-sync`.
+
+- `README.md` — v0.4.0 banner/badge/install/Docker/release references; explicit
+  `docker pull …:0.4.0`; grounded-briefing sources; `GITHUB_TOKEN`/`GH_TOKEN`;
+  `CACHE_FORMAT_VERSION = 2`; accurate `--offline` scope.
+- `docs/index.html` — v0.4.0 title/meta/header/hero/report/footer; v0.4.0 copy
+  commands; grounded-briefing feature card; release-note and token bullets;
+  cache-format note; v0.4.0 release links. 15 `data-copy` controls preserved.
+- New [[v0.4.0-docs-sync]] feature page and implementation report.
+
+GHCR tags are `0.4.0`/`0.4` (no `v`), verified against the registry; release
+links keep `v0.4.0`.
+
+Validation: `cargo fmt --all --check` clean; `cargo clippy --all-targets -- -D
+warnings` clean; `cargo test --all-targets` 162 unit + 5 integration passed;
+HTML parser 0 errors; Chromium at 1365 px and 390 px with no horizontal
+overflow; release URL HTTP 200; OKF validator PASSED (0 errors, 0 warnings).
+Full record in `doc/raw/development-report-20261127T145538Z.md`.
+
+## 2026-11-27 — v0.4.0 docs-sync draft PR opened
+
+Opened draft PR [#36](https://github.com/AlexDevsTheWeb/rustydeps/pull/36)
+(`fix/v0.4.0-docs-and-readme-sync` → `development`).
