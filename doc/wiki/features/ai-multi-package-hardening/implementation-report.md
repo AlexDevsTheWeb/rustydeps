@@ -51,6 +51,7 @@ and rendered cards from each row's own Markdown. The regression test is the
 durable fix: it fails if a refactor starts sharing one summary buffer, one
 `has_ai_analysis` flag, or slug-based drawer ids across rows.
 
-## Next actions
+## Merge request
 
-Open the draft PR to `development` and record its link in the log.
+Draft PR [#34](https://github.com/AlexDevsTheWeb/rustydeps/pull/34)
+(`fix/ai-multi-package-bug-and-custom-provider` → `development`).
