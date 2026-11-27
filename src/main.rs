@@ -179,6 +179,13 @@ async fn run_scan(args: ScanArgs, progress: progress::ScanProgress) -> Result<()
         endpoint: args.ai_endpoint.clone(),
         no_cache: args.no_cache,
     });
+    // `--offline` promises no registry/network lookups, so skip release-note
+    // fetching as well; cached analyses still apply.
+    let summarizer = if args.offline {
+        summarizer.without_changelog()
+    } else {
+        summarizer
+    };
     let mut classified = classify_all(&dependencies, &lookups);
 
     if summarizer.is_enabled() {

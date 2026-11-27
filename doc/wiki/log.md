@@ -718,3 +718,29 @@ Opened draft PR [#32](https://github.com/AlexDevsTheWeb/rustydeps/pull/32)
 implementation report's merge-request section.
 
 Validation: OKF validator PASSED (0 errors, 0 warnings).
+
+## 2026-11-27 — v0.4.0 release-note grounding
+
+Applied Worktree 3 of `doc/raw/2026-11-27/2026-11-27-v0.4.0-and-fixes.md` on
+`feat/v0.4.0-real-changelog-fetcher`.
+
+- `src/registry/changelog.rs` (new) — resolves crates.io/npm/PyPI/Packagist/Go
+  repositories, fetches the matching GitHub release (exact and `v`-toggled
+  tags, then a 100-release list for workspace tags), sanitizes and truncates to
+  1,500 characters, supports `GITHUB_TOKEN`/`GH_TOKEN`, and caps each lookup at
+  8 seconds.
+- `src/ai/prompt.rs` — injects the excerpt as the primary source; keeps the
+  knowledge-based fallback.
+- `src/ai/summary.rs`, `src/main.rs` — fetch on cache misses; `--offline`
+  disables it.
+- `src/ai/cache.rs` — `CACHE_FORMAT_VERSION = 2`; v0.3.x entries are misses.
+- `Cargo.toml` — `0.4.0-dev`; `README.md` grounding section.
+- New [[v0.4.0-changelog-fetcher]] page; [[architecture]] and [[roadmap]]
+  updated.
+
+Validation: `cargo fmt --all --check` clean; `cargo clippy --all-targets -- -D
+warnings` clean; `cargo test --lib` 159 passed; `cargo test --test
+ai_integration_tests` 4 passed; OKF validator PASSED (0 errors, 0 warnings).
+Real API shapes checked against crates.io, GitHub Releases, npm, PyPI, and
+Packagist. Full record in
+`doc/raw/development-report-20261127T072328Z.md`.

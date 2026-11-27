@@ -4,6 +4,7 @@
 //! [`fetch_latest_versions`], which bounds the number of concurrent in-flight
 //! requests so a large scan stays polite to the registries.
 
+pub mod changelog;
 pub mod composer;
 pub mod crates_io;
 pub mod go;

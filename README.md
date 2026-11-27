@@ -137,9 +137,11 @@ Notes:
   filters, and an "Update All" batch command. Opens offline, no CDN.
 - **Granular per-library AI analysis** — with BYOK configuration, every outdated
   package gets its own Markdown briefing (breaking changes, security context,
-  performance impact, migration advice) inside the report drawer. Analyses are
-  cached per ecosystem + package + target version, so repeat scans cost nothing.
-  Enable it with `ai.enabled` in the config or `--ai`; `--no-ai` disables it.
+  performance impact, migration advice) inside the report drawer. Official GitHub
+  release notes are fetched when available and used as the prompt's primary
+  source; analyses are cached per ecosystem + package + target version, so repeat
+  scans cost nothing. Enable it with `ai.enabled` in the config or `--ai`;
+  `--no-ai` disables it.
 - **Concurrent, polite registry access** — bounded concurrency (10 in flight) with graceful
   degradation: a failed lookup is recorded as `unknown` and never aborts the scan.
 - **`--verbose` / `-v`** — debug-level logging to stderr.
@@ -222,6 +224,22 @@ strings are preserved.
 > to Ollama defaults), or persist it in the config as shown below. A failing
 > hosted provider is stopped after the first authentication/quota/model error, so
 > a scan never floods the console with one warning per package.
+
+### Official release-note grounding
+
+Before each AI request, RustyDeps resolves the package's repository from its
+registry metadata (crates.io, npm, PyPI, Packagist, or the Go module path) and
+asks the GitHub Releases API for the release whose tag matches the upgrade
+target. The body is sanitized and truncated to 1,500 characters, then injected
+into the prompt as the primary source. Missing repositories, non-GitHub hosts,
+unknown tags, rate limits, timeouts (8 seconds per package), and empty bodies
+all fall back to the original knowledge-based prompt.
+
+Set `GITHUB_TOKEN` (or `GH_TOKEN`) to raise the GitHub API limit from 60 to
+5,000 requests per hour; a large scan can otherwise exhaust the anonymous
+budget. `--offline` skips release-note lookups as well. Cached summaries are
+versioned: v0.3.x entries are ignored and regenerated once so they can pick up
+the new grounding.
 
 ### Copy-paste configuration
 

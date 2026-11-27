@@ -96,7 +96,8 @@ async fn a_rate_limit_response_trips_the_circuit_breaker() {
         .mount(&server)
         .await;
 
-    let summarizer = Summarizer::from_settings(settings(&server, AiProvider::Custom), None);
+    let summarizer =
+        Summarizer::from_settings(settings(&server, AiProvider::Custom), None).without_changelog();
     let mut dependencies: Vec<_> = (0..10)
         .map(|index| dependency(index, UpdateType::Breaking))
         .collect();
@@ -160,7 +161,8 @@ async fn an_offline_ollama_daemon_skips_every_chat_request() {
         .mount(&server)
         .await;
 
-    let summarizer = Summarizer::from_settings(settings(&server, AiProvider::Ollama), None);
+    let summarizer =
+        Summarizer::from_settings(settings(&server, AiProvider::Ollama), None).without_changelog();
     let mut dependencies: Vec<_> = (0..3)
         .map(|index| dependency(index, UpdateType::Safe))
         .collect();
