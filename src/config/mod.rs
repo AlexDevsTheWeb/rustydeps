@@ -666,6 +666,55 @@ mod tests {
     }
 
     #[test]
+    fn a_custom_provider_file_keeps_its_key_endpoint_and_model() {
+        let directory = tempfile::tempdir().expect("tempdir");
+        let path = directory.path().join("config.json");
+        fs::write(
+            &path,
+            r#"{
+                "ai": {
+                    "enabled": true,
+                    "provider": "custom",
+                    "api_key": "opencode-key-xxx",
+                    "model": "opencode-model-name",
+                    "endpoint": "https://api.opencode.ai/v1",
+                    "cache_enabled": true
+                }
+            }"#,
+        )
+        .expect("write config");
+
+        let config = read_config(&path).expect("parse config");
+        let settings = resolve(config.ai, &AiOverrides::default());
+
+        assert!(settings.enabled);
+        assert_eq!(settings.provider, AiProvider::Custom);
+        assert_eq!(settings.api_key.as_deref(), Some("opencode-key-xxx"));
+        assert_eq!(settings.model, "opencode-model-name");
+        assert_eq!(settings.endpoint, "https://api.opencode.ai/v1");
+        assert!(settings.cache_enabled);
+    }
+
+    #[test]
+    fn an_openai_provider_accepts_a_custom_endpoint_and_key() {
+        let config = AiConfig {
+            enabled: true,
+            provider: AiProvider::Openai,
+            api_key: Some("gateway-key".to_string()),
+            model: Some("gateway-model".to_string()),
+            endpoint: Some("https://gateway.example/v1".to_string()),
+            ..AiConfig::default()
+        };
+
+        let settings = resolve(config, &AiOverrides::default());
+
+        assert_eq!(settings.provider, AiProvider::Openai);
+        assert_eq!(settings.api_key.as_deref(), Some("gateway-key"));
+        assert_eq!(settings.model, "gateway-model");
+        assert_eq!(settings.endpoint, "https://gateway.example/v1");
+    }
+
+    #[test]
     fn parses_boolean_environment_values() {
         for value in ["true", "TRUE", "1", "yes", "on"] {
             assert_eq!(parse_bool(value), Some(true), "{value}");
