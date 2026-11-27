@@ -480,6 +480,36 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn custom_endpoint_requests_carry_the_bearer_key() {
+        let body = r#"{"choices":[{"message":{"role":"assistant","content":"ok"}}]}"#;
+        let (root, request) = serve_once(http_response("200 OK", body)).await;
+        let mut settings = settings(
+            AiProvider::Custom,
+            &format!("{root}/v1"),
+            "opencode-model-name",
+        );
+        settings.api_key = Some("opencode-key-xxx".to_string());
+        let client = AiClient::new(settings).expect("client");
+
+        assert_eq!(
+            client.complete("system", "user").await.expect("completion"),
+            "ok"
+        );
+
+        let request = request.await.expect("request");
+        assert!(
+            request.starts_with("POST /v1/chat/completions HTTP/1.1"),
+            "{request}"
+        );
+        assert!(
+            request
+                .to_ascii_lowercase()
+                .contains("authorization: bearer opencode-key-xxx"),
+            "{request}"
+        );
+    }
+
+    #[tokio::test]
     async fn openrouter_requests_carry_attribution_headers() {
         let body = r#"{"choices":[{"message":{"role":"assistant","content":"ok"}}]}"#;
         let (root, request) = serve_once(http_response("200 OK", body)).await;
