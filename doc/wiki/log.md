@@ -734,3 +734,8 @@ Applied Worktree 1 of `doc/raw/2026-11-27/2026-11-27-v0.4.0-and-fixes.md` on
 Validation: OKF validator PASSED (0 errors, 0 warnings); `cargo fmt --all
 --check` clean. Full verification recorded in
 `doc/raw/development-report-20261127T071441Z.md`.
+
+## 2026-11-27 — README-alignment draft PR opened
+
+Opened draft PR [#33](https://github.com/AlexDevsTheWeb/rustydeps/pull/33)
+(`fix/readme-badges-v0.3.1` → `development`).

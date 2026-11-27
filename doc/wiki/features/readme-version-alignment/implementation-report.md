@@ -41,6 +41,7 @@ instead of v0.2.0.
 None introduced. The README still documents `--tag v0.3.1`; the next release
 must bump it together with `Cargo.toml`.
 
-## Next actions
+## Merge request
 
-Open the draft PR to `development` and record its link in the log.
+Draft PR [#33](https://github.com/AlexDevsTheWeb/rustydeps/pull/33)
+(`fix/readme-badges-v0.3.1` → `development`).
