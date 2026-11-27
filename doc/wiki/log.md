@@ -817,3 +817,8 @@ warnings` clean; `cargo test --all-targets` 162 unit + 5 integration passed;
 HTML parser 0 errors; Chromium at 1365 px and 390 px with no horizontal
 overflow; release URL HTTP 200; OKF validator PASSED (0 errors, 0 warnings).
 Full record in `doc/raw/development-report-20261127T145538Z.md`.
+
+## 2026-11-27 — v0.4.0 docs-sync draft PR opened
+
+Opened draft PR [#36](https://github.com/AlexDevsTheWeb/rustydeps/pull/36)
+(`fix/v0.4.0-docs-and-readme-sync` → `development`).

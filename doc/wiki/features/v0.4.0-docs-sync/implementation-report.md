@@ -61,5 +61,6 @@ cache-only would be a separate behaviour change.
 
 ## Merge request
 
-Draft PR opened to `development`; `main` picks it up through the normal
-development → main sync.
+Draft PR [#36](https://github.com/AlexDevsTheWeb/rustydeps/pull/36)
+(`fix/v0.4.0-docs-and-readme-sync` → `development`); `main` picks it up through
+the normal development → main sync.
