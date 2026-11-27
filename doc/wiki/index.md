@@ -49,6 +49,7 @@ and produces an interactive HTML report with optional AI changelog summaries.
 | [[free-local-ai]] | Quota-free Ollama summaries, `--ai-provider`/`--ai-endpoint`, upgrade-only AI requests, a fatal-error circuit breaker, and report drawers that omit the unavailable notice on up-to-date packages; [implementation report](features/free-local-ai/implementation-report.md). |
 | [[v0.3.1-surgical-fixes]] | `cache clear` and `--no-cache`, the 1-second Ollama preflight, cached-model report badges, and wiremock integration tests; [implementation report](features/v0.3.1-surgical-fixes/implementation-report.md). |
 | [[landing-page-v0.3.1]] | GitHub Pages refresh to v0.3.1: real Cargo/Docker installs, AI/Ollama/cache feature grid, terminal and report-drawer previews, plus a corrected CLI banner; [implementation report](features/landing-page-v0.3.1/implementation-report.md). |
+| [[readme-version-alignment]] | README banner, version badge, tagged Cargo install, Docker tags, and release examples aligned with the shipped v0.3.1 release; [implementation report](features/readme-version-alignment/implementation-report.md). |
 
 ## Source documents
 
@@ -93,6 +94,9 @@ and produces an interactive HTML report with optional AI changelog summaries.
   brief; its AI multi-package and custom-provider part is implemented by
   [[ai-multi-package-hardening]]. The README alignment and changelog-fetcher
   parts are delivered on their own branches.
+  brief; its README-alignment part is implemented by
+  [[readme-version-alignment]]. The AI hardening and changelog-fetcher parts are
+  delivered on their own branches.
 
 ## Conventions
 
