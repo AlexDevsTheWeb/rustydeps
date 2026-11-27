@@ -744,3 +744,8 @@ ai_integration_tests` 4 passed; OKF validator PASSED (0 errors, 0 warnings).
 Real API shapes checked against crates.io, GitHub Releases, npm, PyPI, and
 Packagist. Full record in
 `doc/raw/development-report-20261127T072328Z.md`.
+
+## 2026-11-27 — v0.4.0 changelog-fetcher draft PR opened
+
+Opened draft PR [#35](https://github.com/AlexDevsTheWeb/rustydeps/pull/35)
+(`feat/v0.4.0-real-changelog-fetcher` → `development`).

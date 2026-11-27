@@ -63,6 +63,7 @@ Results recorded in `doc/raw/development-report-20261127T072110Z.md`:
 - Anonymous GitHub access is limited to 60 requests per hour; large scans need
   `GITHUB_TOKEN` for full coverage.
 
-## Next actions
+## Merge request
 
-Open the draft PR to `development` and record its link in the log.
+Draft PR [#35](https://github.com/AlexDevsTheWeb/rustydeps/pull/35)
+(`feat/v0.4.0-real-changelog-fetcher` → `development`).
