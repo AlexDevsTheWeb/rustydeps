@@ -12,11 +12,12 @@ use std::sync::Arc;
 use futures::stream::{self, StreamExt};
 use tracing::{debug, info, warn};
 
-use super::cache::{now_unix_seconds, CachedSummary, SummaryCache};
+use super::cache::{now_unix_seconds, CachedSummary, SummaryCache, CACHE_FORMAT_VERSION};
 use super::client::AiClient;
 use super::prompt::{user_prompt, UpgradeContext, SYSTEM_PROMPT};
 use crate::classifier::ClassifiedDependency;
 use crate::config::{self, AiOverrides, AiProvider, AiSettings};
+use crate::registry::changelog::ChangelogFetcher;
 
 /// Maximum number of provider requests in flight at once.
 pub const MAX_CONCURRENCY: usize = 4;
@@ -33,6 +34,8 @@ pub struct Summarizer {
     force_refresh: bool,
     /// Set after a fatal provider error; stops the remaining requests.
     stop: Arc<AtomicBool>,
+    /// Resolves official release notes from the package repository.
+    changelog: ChangelogFetcher,
 }
 
 impl Summarizer {
@@ -70,6 +73,7 @@ impl Summarizer {
                 model: Some(settings.model),
                 force_refresh: settings.force_refresh,
                 stop: Arc::new(AtomicBool::new(false)),
+                changelog: ChangelogFetcher::disabled(),
             };
         }
 
@@ -93,6 +97,7 @@ impl Summarizer {
                     model: Some(settings.model),
                     force_refresh: settings.force_refresh,
                     stop: Arc::new(AtomicBool::new(false)),
+                    changelog: ChangelogFetcher::new(),
                 }
             }
             Err(error) => {
@@ -108,6 +113,7 @@ impl Summarizer {
                     model: Some(settings.model),
                     force_refresh: settings.force_refresh,
                     stop: Arc::new(AtomicBool::new(false)),
+                    changelog: ChangelogFetcher::disabled(),
                 }
             }
         }
@@ -123,6 +129,7 @@ impl Summarizer {
             model: None,
             force_refresh: false,
             stop: Arc::new(AtomicBool::new(false)),
+            changelog: ChangelogFetcher::disabled(),
         }
     }
 
@@ -134,6 +141,12 @@ impl Summarizer {
     /// The selected provider, when one was configured.
     pub fn provider(&self) -> Option<AiProvider> {
         self.provider
+    }
+
+    /// Skip registry changelog lookups for this run (`--offline`, tests).
+    pub fn without_changelog(mut self) -> Self {
+        self.changelog = ChangelogFetcher::disabled();
+        self
     }
 
     /// Analyze every outdated, registry-resolved dependency in place.
@@ -195,7 +208,9 @@ impl Summarizer {
             return;
         }
 
-        let context = UpgradeContext::new(ecosystem, package, &dependency.current_version, &target);
+        let changelog = self.changelog.fetch(ecosystem, package, &target).await;
+        let context = UpgradeContext::new(ecosystem, package, &dependency.current_version, &target)
+            .with_changelog(changelog.as_deref());
 
         match client.complete(SYSTEM_PROMPT, &user_prompt(&context)).await {
             Ok(summary) if !summary.trim().is_empty() => {
@@ -210,6 +225,7 @@ impl Summarizer {
                     model: self.model.clone().unwrap_or_default(),
                     summary,
                     created_at: now_unix_seconds(),
+                    prompt_version: CACHE_FORMAT_VERSION,
                 };
                 if let Err(error) = self.cache.store(&entry) {
                     warn!(package, %error, "could not write the AI summary cache");
@@ -281,6 +297,7 @@ mod tests {
             model: Some("test-model".to_string()),
             force_refresh: false,
             stop: Arc::new(AtomicBool::new(false)),
+            changelog: ChangelogFetcher::disabled(),
         }
     }
 
@@ -329,6 +346,7 @@ mod tests {
                 model: "test-model".to_string(),
                 summary: "### 🚨 Breaking Changes\nUse `tokio::runtime`.".to_string(),
                 created_at: now_unix_seconds(),
+                prompt_version: CACHE_FORMAT_VERSION,
             })
             .expect("store cache");
 
@@ -357,6 +375,7 @@ mod tests {
                 model: "test-model".to_string(),
                 summary: "stale cached analysis".to_string(),
                 created_at: now_unix_seconds(),
+                prompt_version: CACHE_FORMAT_VERSION,
             })
             .expect("store cache");
 

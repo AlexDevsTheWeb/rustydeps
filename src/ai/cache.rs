@@ -14,6 +14,13 @@ use serde::{Deserialize, Serialize};
 use crate::config;
 use crate::model::Ecosystem;
 
+/// Version of the cached-summary contract.
+///
+/// Bump whenever the prompt gains or changes grounding (for example release
+/// notes). Entries written by an older version are treated as misses and are
+/// regenerated, so users never keep a lower-quality analysis indefinitely.
+pub const CACHE_FORMAT_VERSION: u32 = 2;
+
 /// One cached package analysis.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct CachedSummary {
@@ -29,6 +36,9 @@ pub struct CachedSummary {
     pub summary: String,
     /// Unix timestamp (seconds) when the entry was written.
     pub created_at: u64,
+    /// Cache contract version; older entries are regenerated.
+    #[serde(default)]
+    pub prompt_version: u32,
 }
 
 /// A per-package summary cache rooted at the platform cache directory.
@@ -90,6 +100,7 @@ impl SummaryCache {
         let matches = cached.ecosystem == ecosystem
             && cached.package == package
             && cached.target_version == target_version
+            && cached.prompt_version == CACHE_FORMAT_VERSION
             && !cached.summary.trim().is_empty();
 
         matches.then_some(cached)
@@ -193,6 +204,7 @@ mod tests {
             model: "gpt-4o-mini".to_string(),
             summary: "### 🚨 Breaking Changes\nUse `tokio::runtime`.".to_string(),
             created_at: now_unix_seconds(),
+            prompt_version: CACHE_FORMAT_VERSION,
         }
     }
 
@@ -260,6 +272,33 @@ mod tests {
             .expect("read_dir")
             .next()
             .is_none());
+    }
+
+    #[test]
+    fn ignores_entries_from_an_older_prompt_contract() {
+        let directory = tempfile::tempdir().expect("tempdir");
+        let cache = SummaryCache::with_root(true, directory.path().to_path_buf());
+
+        let mut entry = cached();
+        entry.prompt_version = CACHE_FORMAT_VERSION - 1;
+        cache.store(&entry).expect("store stale entry");
+
+        assert!(cache.load(Ecosystem::Cargo, "tokio", "2.0.0").is_none());
+
+        // A missing version field (v0.3.x entries) is also a miss.
+        let legacy = serde_json::json!({
+            "ecosystem": "cargo",
+            "package": "tokio",
+            "target_version": "2.0.0",
+            "model": "gpt-4o-mini",
+            "summary": "legacy",
+            "created_at": 0
+        });
+        let path = cache
+            .path_for(Ecosystem::Cargo, "tokio", "2.0.0")
+            .expect("path");
+        fs::write(path, serde_json::to_string(&legacy).expect("json")).expect("write legacy");
+        assert!(cache.load(Ecosystem::Cargo, "tokio", "2.0.0").is_none());
     }
 
     #[test]

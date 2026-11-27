@@ -3,10 +3,10 @@ title: "RustyDeps — Architecture"
 type: architecture
 description: "Module breakdown and core DTOs for the RustyDeps CLI."
 status: active
-version: 0.3.1
+version: 0.4.0
 license: CC-BY-4.0
 created: 2026-10-14
-updated: 2026-10-21
+updated: 2026-11-27
 tags: [architecture, rust, cli, dto]
 ---
 
@@ -151,6 +151,15 @@ flight using `futures` `buffer_unordered`.
   module-path letters encoded as `!x`) and returns the highest stable tag.
 - **`ComposerClient`** queries `repo.packagist.org/p2/{name}.json` and returns
   the highest stable tag, skipping `dev-*` and prereleases.
+- **`ChangelogFetcher`** (`src/registry/changelog.rs`) resolves a package's
+  repository from the same registry metadata (or a `github.com` Go module path),
+  then fetches the matching GitHub release for the upgrade target. It tries the
+  version as published and with the `v` prefix toggled, falls back to the 100
+  most recent releases to match workspace tags such as `tokio-1.40.0`, sends
+  `GITHUB_TOKEN`/
+  `GH_TOKEN` when present, sanitizes and truncates the body to 1,500 characters,
+  and degrades to `None` on every failure. One lookup is bounded to 8 seconds.
+  See [[v0.4.0-changelog-fetcher]].
 
 Response parsing is split from the HTTP calls into pure `parse_*` functions
 (one per client) so every client is unit tested without network access. Client
@@ -222,10 +231,11 @@ Gemini, and OpenRouter require keys; keys fall back to `OPENAI_API_KEY`,
 with a resolved target. Up-to-date and unknown rows never reach the client. An
 Ollama run first probes `<origin>/api/tags` with a 1-second timeout; if the
 daemon is offline, one actionable warning is logged, the breaker is tripped, and
-no chat request is attempted (cached analyses still apply). It then checks
-`SummaryCache` first, then calls `AiClient` (`src/ai/client.rs`), an async
-`reqwest` chat-completions client with a 45-second timeout, bounded to four
-concurrent packages. A fatal provider error (401/402/403/404/429, a body
+no chat request is attempted (cached analyses still apply). It checks
+`SummaryCache` first; on a miss it resolves official release notes with
+`ChangelogFetcher` (unless `--offline` or `without_changelog` disabled it), then
+calls `AiClient` (`src/ai/client.rs`), an async `reqwest` chat-completions client
+with a 45-second timeout, bounded to four concurrent packages. A fatal provider error (401/402/403/404/429, a body
 mentioning quota, or a connection failure) trips a scan-local breaker: one
 warning is logged and the remaining packages are skipped, so a quota-exhausted
 key never floods the console. `--no-cache` bypasses cached reads for one run
@@ -235,14 +245,16 @@ normalizes each provider base URL — bare origins, `/v1` or `/v1beta` roots,
 trailing slashes, full `/chat/completions` URLs, and query strings all resolve to
 one valid endpoint — and OpenRouter requests add `HTTP-Referer`/`X-Title`
 attribution headers. `src/ai/prompt.rs` fixes the four-section Markdown
-contract; one request is made per
-`(ecosystem, package, current_version, target_version)`.
+contract and injects the release-note excerpt as the primary source when one was
+fetched; without notes it falls back to the knowledge-based prompt. One request
+is made per `(ecosystem, package, current_version, target_version)`.
 
 `SummaryCache` (`src/ai/cache.rs`) stores one JSON entry per target version at
 `~/.cache/rustydeps/changelogs/{ecosystem}_{package}_{target_version}.json`, so
 projects sharing a dependency reuse the analysis for free. Cache entries are
-validated against ecosystem, package, and target before use; `cache_enabled:
-false` skips disk entirely. `SummaryCache::clear` removes every file for
+validated against ecosystem, package, target, and `CACHE_FORMAT_VERSION` (now
+`2`) before use, so v0.3.x entries are regenerated once with release-note
+grounding; `cache_enabled: false` skips disk entirely. `SummaryCache::clear` removes every file for
 `rustydeps cache clear`, returning the count (a missing directory yields zero).
 A cache hit copies `CachedSummary::model` into `ClassifiedDependency::ai_model`,
 which feeds the report badge.
