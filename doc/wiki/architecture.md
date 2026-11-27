@@ -3,7 +3,7 @@ title: "RustyDeps — Architecture"
 type: architecture
 description: "Module breakdown and core DTOs for the RustyDeps CLI."
 status: active
-version: 0.3.0
+version: 0.3.1
 license: CC-BY-4.0
 created: 2026-10-14
 updated: 2026-10-21
@@ -35,13 +35,19 @@ CLI (clap)
 > SemVer classifier, HTML report engine, and the per-library AI summarizer
 > below are implemented (Phases 1–6).
 
+`src/lib.rs` exposes every module as the `rustydeps` library; `src/main.rs` is a
+thin binary over it, so `tests/` integration tests exercise the same public API
+without spawning the CLI.
+
 ### CLI (`src/cli.rs`, `src/main.rs`)
 
 Built with `clap` (derive pattern). The `scan` subcommand takes a root `path`
 (default `.`), `--ai`, `--no-ai`, `--ai-model <MODEL>`,
-`--ai-provider <PROVIDER>`, `--ai-endpoint <URL>`, `--output`/`-o` (default
-`rustydeps-report.html`), `--format html|json`, `--offline`/`--no-fetch`,
-`--no-open`, and `--verbose`/`-v`.
+`--ai-provider <PROVIDER>`, `--ai-endpoint <URL>`, `--no-cache`, `--output`/`-o`
+(default `rustydeps-report.html`), `--format html|json`,
+`--offline`/`--no-fetch`, `--no-open`, and `--verbose`/`-v`. The separate
+`cache clear` subcommand deletes every AI changelog entry and prints
+`✔ Cleared X cached AI changelog entries.`
 `main` is `#[tokio::main]` and returns `anyhow::Result`; it initializes
 `tracing-subscriber` (logs go to stderr so stdout stays clean for `--format
 json`) and dispatches the subcommand. On text runs it prints the "Full Block
@@ -174,7 +180,7 @@ vanilla JavaScript are inline, so it opens offline with no network access. Rows
 carry a copyable per-ecosystem update command and each project exposes an
 "Update All" command in its expanded body. Cards render collapsed by default.
 When an AI analysis exists, the drawer renders the Markdown briefing in a
-**🤖 AI Library Release Analysis** card, with a `⚡ Cached analysis` badge on a
+**🤖 AI Library Release Analysis** card, with a `⚡ Cached (<model>)` badge on a
 cache hit. Only rows with an available upgrade are eligible: an up-to-date or
 unknown row renders a **📦 Dependency Status** card with no "AI analysis
 unavailable" notice, while an eligible row without a summary shows the generic
@@ -213,13 +219,18 @@ Gemini, and OpenRouter require keys; keys fall back to `OPENAI_API_KEY`,
 `GEMINI_API_KEY`/`GOOGLE_API_KEY`, and `OPENROUTER_API_KEY` respectively.
 
 `Summarizer` (`src/ai/summary.rs`) analyzes only `Safe`/`AtRisk`/`Breaking` rows
-with a resolved target. Up-to-date and unknown rows never reach the client. It
-checks `SummaryCache` first, then calls `AiClient` (`src/ai/client.rs`), an async
+with a resolved target. Up-to-date and unknown rows never reach the client. An
+Ollama run first probes `<origin>/api/tags` with a 1-second timeout; if the
+daemon is offline, one actionable warning is logged, the breaker is tripped, and
+no chat request is attempted (cached analyses still apply). It then checks
+`SummaryCache` first, then calls `AiClient` (`src/ai/client.rs`), an async
 `reqwest` chat-completions client with a 45-second timeout, bounded to four
 concurrent packages. A fatal provider error (401/402/403/404/429, a body
 mentioning quota, or a connection failure) trips a scan-local breaker: one
 warning is logged and the remaining packages are skipped, so a quota-exhausted
-key never floods the console. `chat_endpoint`
+key never floods the console. `--no-cache` bypasses cached reads for one run
+(`force_refresh`); fresh results still refresh the on-disk cache when it is
+enabled. `chat_endpoint`
 normalizes each provider base URL — bare origins, `/v1` or `/v1beta` roots,
 trailing slashes, full `/chat/completions` URLs, and query strings all resolve to
 one valid endpoint — and OpenRouter requests add `HTTP-Referer`/`X-Title`
@@ -231,7 +242,10 @@ contract; one request is made per
 `~/.cache/rustydeps/changelogs/{ecosystem}_{package}_{target_version}.json`, so
 projects sharing a dependency reuse the analysis for free. Cache entries are
 validated against ecosystem, package, and target before use; `cache_enabled:
-false` skips disk entirely.
+false` skips disk entirely. `SummaryCache::clear` removes every file for
+`rustydeps cache clear`, returning the count (a missing directory yields zero).
+A cache hit copies `CachedSummary::model` into `ClassifiedDependency::ai_model`,
+which feeds the report badge.
 
 The report converts the Markdown with `src/report/markdown.rs`
 (`pulldown-cmark`, raw HTML events dropped) and inserts it with Askama's
@@ -260,9 +274,10 @@ pub enum UpdateType {
 
 The classified result set is `ClassifiedDependency` in `src/classifier/mod.rs`
 (`name`, `ecosystem`, `current_version`, `latest_version`, `update_type`,
-`manifest_path`, `is_dev_dependency`, `ai_summary`, `ai_cached`); it is the input
-to the Phase 4 report. `ai_summary` holds the Markdown briefing (or `None`), and
-`ai_cached` marks a cache hit for the report's ⚡ badge.
+`manifest_path`, `is_dev_dependency`, `ai_summary`, `ai_model`, `ai_cached`); it
+is the input to the Phase 4 report. `ai_summary` holds the Markdown briefing (or
+`None`), `ai_model` records the producing model, and `ai_cached` marks a cache
+hit for the report's `⚡ Cached (<model>)` badge.
 
 ## Quality bars
 

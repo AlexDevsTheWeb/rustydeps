@@ -24,6 +24,7 @@ fn dependency(
         manifest_path: PathBuf::from(manifest),
         is_dev_dependency: false,
         ai_summary: None,
+        ai_model: None,
         ai_cached: false,
     }
 }
@@ -400,7 +401,7 @@ fn renders_the_ai_tag_and_analysis_card() {
     assert!(html.contains("Use <code>tokio::runtime</code> instead."));
     assert!(html.contains("View package changelog"));
     assert!(html.contains("https://crates.io/crates/tokio/versions"));
-    assert!(!html.contains("⚡ Cached analysis"));
+    assert!(!html.contains("⚡ Cached"));
     assert!(!html.contains("AI analysis unavailable"));
 }
 
@@ -416,13 +417,15 @@ fn marks_analyses_served_from_the_cache() {
     );
     dep.ai_summary =
         Some("### 🛡️ Security & Vulnerability Context\n\nNo known advisories.".to_string());
+    dep.ai_model = Some("llama3.2:3b".to_string());
     dep.ai_cached = true;
 
     let data = ReportData::from_classified(std::slice::from_ref(&dep), &ReportMeta::default());
     assert!(data.projects[0].dependencies[0].ai_cached);
+    assert_eq!(data.projects[0].dependencies[0].ai_model, "llama3.2:3b");
 
     let html = render(&[dep]);
-    assert!(html.contains("⚡ Cached analysis"));
+    assert!(html.contains("⚡ Cached (llama3.2:3b)"));
 }
 
 #[test]

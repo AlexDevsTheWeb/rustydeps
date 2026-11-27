@@ -18,6 +18,9 @@ use crate::config::{AiProvider, AiSettings};
 /// reasoning model can take tens of seconds to produce a summary.
 pub const REQUEST_TIMEOUT: Duration = Duration::from_secs(45);
 
+/// Per-request timeout for the Ollama daemon health probe.
+pub const OLLAMA_PROBE_TIMEOUT: Duration = Duration::from_millis(1000);
+
 /// Maximum number of response-body characters kept in an error message.
 pub const ERROR_BODY_LIMIT: usize = 300;
 
@@ -114,6 +117,40 @@ impl AiClient {
         chat_endpoint(self.settings.provider, &self.settings.endpoint)
     }
 
+    /// Origin of the Ollama daemon, used in offline warnings.
+    pub fn ollama_origin(&self) -> String {
+        match reqwest::Url::parse(self.settings.endpoint.trim()) {
+            Ok(url) => match (url.host_str(), url.port()) {
+                (Some(host), Some(port)) => format!("{}://{}:{}", url.scheme(), host, port),
+                (Some(host), None) => format!("{}://{}", url.scheme(), host),
+                _ => self.settings.endpoint.clone(),
+            },
+            Err(_) => self.settings.endpoint.clone(),
+        }
+    }
+
+    /// Probe the local Ollama daemon's `/api/tags` endpoint.
+    ///
+    /// The probe has a 1-second budget so an offline daemon cannot delay the
+    /// scan; it expects the configured endpoint to be an Ollama base URL (with
+    /// or without `/v1`) and always targets the daemon's root.
+    pub async fn ollama_ready(&self) -> bool {
+        let Some(url) = ollama_tags_url(&self.settings.endpoint) else {
+            return false;
+        };
+        let Ok(probe) = reqwest::Client::builder()
+            .timeout(OLLAMA_PROBE_TIMEOUT)
+            .build()
+        else {
+            return false;
+        };
+
+        matches!(
+            probe.get(url).send().await,
+            Ok(response) if response.status().is_success()
+        )
+    }
+
     /// Send a system/user prompt pair and return the completion text.
     pub async fn complete(&self, system: &str, user: &str) -> Result<String, AiClientError> {
         let mut request = ChatRequest {
@@ -207,6 +244,18 @@ fn reasoning_effort_for(provider: AiProvider, model: &str) -> Option<&'static st
     let is_gemini_thinking =
         provider == AiProvider::Gemini && !model.to_ascii_lowercase().contains("lite");
     is_gemini_thinking.then_some("none")
+}
+
+/// Resolve an Ollama-compatible base to the daemon's `/api/tags` URL.
+///
+/// Ollama serves the OpenAI-compatible API under `/v1` but its health endpoint
+/// at the root, so any path on the configured URL is replaced.
+fn ollama_tags_url(endpoint: &str) -> Option<reqwest::Url> {
+    let mut url = reqwest::Url::parse(endpoint.trim()).ok()?;
+    url.set_path("/api/tags");
+    url.set_query(None);
+    url.set_fragment(None);
+    Some(url)
 }
 
 /// Resolve a provider base URL to a chat-completions endpoint.
@@ -347,6 +396,7 @@ mod tests {
             endpoint: endpoint.to_string(),
             max_tokens: 400,
             cache_enabled: false,
+            force_refresh: false,
         }
     }
 
@@ -499,6 +549,30 @@ mod tests {
             reasoning_effort_for(AiProvider::OpenRouter, "google/gemini-3.5-flash"),
             None
         );
+    }
+
+    #[test]
+    fn builds_the_ollama_probe_url_and_origin() {
+        assert_eq!(
+            ollama_tags_url("http://localhost:11434/v1")
+                .expect("url")
+                .as_str(),
+            "http://localhost:11434/api/tags"
+        );
+        assert_eq!(
+            ollama_tags_url("http://localhost:11434/v1/chat/completions?x=1")
+                .expect("url")
+                .as_str(),
+            "http://localhost:11434/api/tags"
+        );
+
+        let client = AiClient::new(settings(
+            AiProvider::Ollama,
+            "http://localhost:11434/v1",
+            "llama3.2:3b",
+        ))
+        .expect("client");
+        assert_eq!(client.ollama_origin(), "http://localhost:11434");
     }
 
     #[test]

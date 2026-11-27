@@ -3,7 +3,8 @@
 <html class="dark scroll-smooth" lang="en"><head>
 <meta charset="utf-8"/>
 <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-<title>RustyDeps — Fast, Parallel CLI Dependency Intelligence</title>
+<meta content="Fast, parallel dependency scanning across Cargo, npm, PyPI, Go and Composer — SemVer risk classes, free local AI briefings, and one self-contained HTML report." name="description"/>
+<title>RustyDeps v0.3.1 — Dependency Intelligence with AI Briefings</title>
 <!-- Tailwind CSS v3 with Forms & Container-Queries -->
 <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
 <!-- Tailwind Custom Configuration -->
@@ -87,32 +88,413 @@
 <span class="text-2xl transition-transform group-hover:scale-110">🦀</span>
 <span class="font-bold text-lg tracking-tight text-white group-hover:text-rust-400 transition-colors">RustyDeps</span>
 </a>
-<span class="hidden sm:inline-flex items-center px-2 py-0.5 rounded text-xs font-mono font-medium bg-[#18181b] text-zinc-400 border border-[#27272a]">
-          v0.1.0
-        </span>
+<span class="hidden sm:inline-flex items-center px-2 py-0.5 rounded text-xs font-mono font-medium bg-[#18181b] text-rust-400 border border-rust-500/30">v0.3.1</span>
 </div>
 <!-- Navigation Links -->
-<nav class="hidden md:flex items-center space-x-8 text-sm font-medium text-zinc-400"><a class="hover:text-white transition-colors" href="#preview">Terminal &amp; Report</a><a class="hover:text-white transition-colors" href="#features">Core Features</a><a class="hover:text-white transition-colors" href="#quickstart">Quickstart</a><a class="hover:text-white transition-colors" href="https://github.com/AlexDevsTheWeb/rustydeps" target="_blank">Documentation</a></nav>
-<!-- Right Actions: crates.io badge & GitHub -->
-<div class="flex items-center space-x-3"><span class="hidden sm:inline-flex items-center px-2 py-0.5 rounded text-xs font-mono font-medium bg-[#18181b] text-zinc-400 border border-[#27272a]">Rust 2021</span><span class="hidden sm:inline-flex items-center px-2 py-0.5 rounded text-xs font-mono font-medium bg-[#18181b] text-zinc-400 border border-[#27272a]">MIT</span><a class="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-lg border border-[#27272a] bg-[#121215] hover:bg-[#18181b] text-xs font-mono font-medium text-zinc-200 transition-all hover:border-zinc-500" href="https://github.com/AlexDevsTheWeb/rustydeps" rel="noreferrer" target="_blank"><svg class="w-4 h-4 text-zinc-300 fill-current" viewbox="0 0 24 24"><path clip-rule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z" fill-rule="evenodd"></path></svg><span>GitHub</span></a></div>
+<nav class="hidden md:flex items-center space-x-8 text-sm font-medium text-zinc-400">
+<a class="hover:text-white transition-colors" href="#features">Features</a>
+<a class="hover:text-white transition-colors" href="#ai">AI Briefings</a>
+<a class="hover:text-white transition-colors" href="#preview">Report</a>
+<a class="hover:text-white transition-colors" href="#quickstart">Quickstart</a>
+<a class="hover:text-white transition-colors" href="https://github.com/AlexDevsTheWeb/rustydeps#readme" rel="noreferrer" target="_blank">Docs</a>
+</nav>
+<!-- Right Actions: license, release & GitHub -->
+<div class="flex items-center space-x-3">
+<span class="hidden sm:inline-flex items-center px-2 py-0.5 rounded text-xs font-mono font-medium bg-[#18181b] text-zinc-400 border border-[#27272a]">Rust 2021</span>
+<span class="hidden lg:inline-flex items-center px-2 py-0.5 rounded text-xs font-mono font-medium bg-[#18181b] text-zinc-400 border border-[#27272a]">MIT / Apache-2.0</span>
+<a class="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-lg border border-[#27272a] bg-[#121215] hover:bg-[#18181b] text-xs font-mono font-medium text-zinc-200 transition-all hover:border-zinc-500" href="https://github.com/AlexDevsTheWeb/rustydeps" rel="noreferrer" target="_blank">
+<svg class="w-4 h-4 text-zinc-300 fill-current" viewbox="0 0 24 24"><path clip-rule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z" fill-rule="evenodd"></path></svg>
+<span>GitHub</span>
+</a>
+</div>
 </div>
 </header>
 <!-- END: MainHeader -->
 <!-- BEGIN: HeroSection -->
-<section class="relative pt-16 pb-20 md:pt-24 md:pb-28 bg-grid-pattern overflow-hidden"><div class="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[300px] bg-gradient-to-tr from-rust-600/10 via-cyan-500/10 to-transparent blur-3xl pointer-events-none -z-10"></div><div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 text-center"><div class="inline-flex flex-wrap items-center justify-center gap-2 mb-6 font-mono text-xs"><span class="px-2.5 py-1 rounded-md bg-[#18181b] border border-rust-500/30 text-rust-400 font-medium flex items-center gap-1.5"><span class="w-1.5 h-1.5 rounded-full bg-rust-500"></span>v0.1.0</span><span class="px-2.5 py-1 rounded-md bg-[#18181b] border border-[#27272a] text-zinc-300">MIT License</span><span class="px-2.5 py-1 rounded-md bg-[#18181b] border border-[#27272a] text-zinc-300">Rust 2021</span><span class="px-2.5 py-1 rounded-md bg-[#18181b] border border-[#27272a] text-emerald-400">Open Source</span></div><h1 class="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-white max-w-4xl mx-auto leading-tight sm:leading-none">Rusty<span class="text-transparent bg-clip-text bg-gradient-to-r from-rust-400 via-rust-500 to-amber-300">Deps</span></h1><p class="mt-5 text-base sm:text-lg text-zinc-300 max-w-2xl mx-auto leading-relaxed font-sans">Fast, parallel multi-ecosystem dependency scanner &amp; SemVer analyzer in Rust.</p><div class="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3"><div class="w-full sm:w-auto flex items-center justify-between bg-[#121215] border border-[#27272a] hover:border-[#3f3f46] rounded-xl p-1.5 pl-4 transition-all shadow-lg"><div class="flex items-center space-x-2 font-mono text-xs sm:text-sm text-zinc-300 mr-4"><span class="text-rust-500 select-none">$</span><span>cargo install --path .</span></div><button aria-label="Copy install command" class="p-2 rounded-lg bg-[#18181b] hover:bg-[#27272a] text-zinc-300 hover:text-white transition-all text-xs flex items-center gap-1.5 border border-[#27272a]" onclick="copyToClipboard('cargo install --path .', this)"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg><span class="font-sans font-medium text-xs">Copy</span></button></div><a class="w-full sm:w-auto inline-flex items-center justify-center px-5 py-2.5 rounded-xl bg-[#18181b] border border-[#27272a] hover:border-zinc-500 text-zinc-200 text-xs sm:text-sm font-mono font-medium hover:text-white transition-all shadow-sm" href="https://github.com/AlexDevsTheWeb/rustydeps" rel="noreferrer" target="_blank"><svg class="w-4 h-4 text-zinc-300 fill-current mr-2" viewbox="0 0 24 24"><path clip-rule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z" fill-rule="evenodd"></path></svg><span>View on GitHub</span></a></div><div class="mt-8 flex flex-wrap items-center justify-center gap-2 font-mono text-xs"><span class="text-zinc-500 mr-1 text-[11px] uppercase tracking-wider">Ecosystems:</span><span class="px-2.5 py-1 rounded-md bg-[#121215] border border-[#27272a] text-zinc-300 hover:border-rust-500/40 transition-colors">Cargo 🦀</span><span class="px-2.5 py-1 rounded-md bg-[#121215] border border-[#27272a] text-zinc-300 hover:border-emerald-500/40 transition-colors">npm 🟢</span><span class="px-2.5 py-1 rounded-md bg-[#121215] border border-[#27272a] text-zinc-300 hover:border-yellow-500/40 transition-colors">PyPI 🐍</span><span class="px-2.5 py-1 rounded-md bg-[#121215] border border-[#27272a] text-zinc-300 hover:border-cyan-500/40 transition-colors">Go 🐹</span><span class="px-2.5 py-1 rounded-md bg-[#121215] border border-[#27272a] text-zinc-300 hover:border-purple-500/40 transition-colors">Composer 🐘</span></div></div></section>
+<section class="relative pt-16 pb-20 md:pt-24 md:pb-28 bg-grid-pattern overflow-hidden">
+<div class="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[300px] bg-gradient-to-tr from-rust-600/10 via-cyan-500/10 to-transparent blur-3xl pointer-events-none -z-10"></div>
+<div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+<div class="inline-flex flex-wrap items-center justify-center gap-2 mb-6 font-mono text-xs">
+<span class="px-2.5 py-1 rounded-md bg-[#18181b] border border-rust-500/30 text-rust-400 font-medium flex items-center gap-1.5"><span class="w-1.5 h-1.5 rounded-full bg-rust-500"></span>v0.3.1 · latest release</span>
+<span class="px-2.5 py-1 rounded-md bg-[#18181b] border border-[#27272a] text-zinc-300">MIT / Apache-2.0</span>
+<span class="px-2.5 py-1 rounded-md bg-[#18181b] border border-[#27272a] text-zinc-300">Rust 2021</span>
+<span class="px-2.5 py-1 rounded-md bg-[#18181b] border border-[#27272a] text-emerald-400">Open Source</span>
+</div>
+<h1 class="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-white max-w-4xl mx-auto leading-tight sm:leading-none">Rusty<span class="text-transparent bg-clip-text bg-gradient-to-r from-rust-400 via-rust-500 to-amber-300">Deps</span></h1>
+<p class="mt-5 text-base sm:text-lg text-zinc-300 max-w-3xl mx-auto leading-relaxed font-sans">Fast, parallel dependency scanning across five ecosystems, with SemVer risk classes and per-library AI briefings — rendered into one self-contained HTML report.</p>
+<div class="mt-8 flex flex-col items-center gap-3">
+<div class="w-full max-w-4xl flex items-center justify-between bg-[#121215] border border-[#27272a] hover:border-[#3f3f46] rounded-xl p-1.5 pl-4 transition-all shadow-lg">
+<div class="flex items-center space-x-2 font-mono text-xs sm:text-sm text-zinc-300 mr-4 min-w-0">
+<span class="text-rust-500 select-none">$</span>
+<span class="break-words leading-snug text-left whitespace-normal text-[11px] sm:text-xs">cargo install --git https://github.com/AlexDevsTheWeb/rustydeps --tag v0.3.1</span>
+</div>
+<button aria-label="Copy cargo install command" class="shrink-0 p-2 rounded-lg bg-[#18181b] hover:bg-[#27272a] text-zinc-300 hover:text-white transition-all text-xs flex items-center gap-1.5 border border-[#27272a]" data-copy="cargo install --git https://github.com/AlexDevsTheWeb/rustydeps --tag v0.3.1" onclick="copyFrom(this)">
+<svg class="w-4 h-4" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+<span class="font-sans font-medium text-xs">Copy</span>
+</button>
+</div>
+<div class="w-full max-w-4xl flex items-center justify-between bg-[#121215] border border-[#27272a] hover:border-[#3f3f46] rounded-xl p-1.5 pl-4 transition-all shadow-lg">
+<div class="flex items-center space-x-2 font-mono text-xs sm:text-sm text-zinc-300 mr-4 min-w-0">
+<span class="text-cyanAccent-500 select-none">$</span>
+<span class="break-words leading-snug text-left whitespace-normal text-[11px] sm:text-xs">docker run --rm -v /path/to/repo:/workspace ghcr.io/alexdevstheweb/rustydeps:0.3.1</span>
+</div>
+<button aria-label="Copy docker run command" class="shrink-0 p-2 rounded-lg bg-[#18181b] hover:bg-[#27272a] text-zinc-300 hover:text-white transition-all text-xs flex items-center gap-1.5 border border-[#27272a]" data-copy="docker run --rm -v /path/to/repo:/workspace ghcr.io/alexdevstheweb/rustydeps:0.3.1" onclick="copyFrom(this)">
+<svg class="w-4 h-4" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+<span class="font-sans font-medium text-xs">Copy</span>
+</button>
+</div>
+<div class="flex flex-wrap items-center justify-center gap-3 pt-1">
+<a class="inline-flex items-center justify-center px-5 py-2.5 rounded-xl bg-rust-500 hover:bg-rust-400 text-[#09090b] text-xs sm:text-sm font-semibold transition-all shadow-lg shadow-rust-500/20" href="https://github.com/AlexDevsTheWeb/rustydeps/releases/tag/v0.3.1" rel="noreferrer" target="_blank">Release notes v0.3.1</a>
+<a class="inline-flex items-center justify-center px-5 py-2.5 rounded-xl bg-[#18181b] border border-[#27272a] hover:border-zinc-500 text-zinc-200 text-xs sm:text-sm font-mono font-medium hover:text-white transition-all shadow-sm" href="https://github.com/AlexDevsTheWeb/rustydeps" rel="noreferrer" target="_blank">View on GitHub</a>
+</div>
+</div>
+<div class="mt-8 flex flex-wrap items-center justify-center gap-2 font-mono text-xs">
+<span class="text-zinc-500 mr-1 text-[11px] uppercase tracking-wider">Ecosystems:</span>
+<span class="px-2.5 py-1 rounded-md bg-[#121215] border border-[#27272a] text-zinc-300 hover:border-rust-500/40 transition-colors">Cargo 🦀</span>
+<span class="px-2.5 py-1 rounded-md bg-[#121215] border border-[#27272a] text-zinc-300 hover:border-emerald-500/40 transition-colors">npm 🟢</span>
+<span class="px-2.5 py-1 rounded-md bg-[#121215] border border-[#27272a] text-zinc-300 hover:border-yellow-500/40 transition-colors">PyPI 🐍</span>
+<span class="px-2.5 py-1 rounded-md bg-[#121215] border border-[#27272a] text-zinc-300 hover:border-cyan-500/40 transition-colors">Go 🐹</span>
+<span class="px-2.5 py-1 rounded-md bg-[#121215] border border-[#27272a] text-zinc-300 hover:border-purple-500/40 transition-colors">Composer 🐘</span>
+</div>
+</div>
+</section>
 <!-- END: HeroSection -->
-<!-- BEGIN: EcosystemsSection -->
-<!-- END: EcosystemsSection -->
 <!-- BEGIN: FeatureHighlightsSection -->
-<section class="py-20 border-t border-[#27272a] relative" id="features"><div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8"><div class="text-center max-w-3xl mx-auto mb-16"><h2 class="text-xs uppercase font-mono tracking-widest text-rust-500 font-semibold mb-2">Section 3 • Architecture</h2><h3 class="text-3xl sm:text-4xl font-bold text-white tracking-tight">Core Features Grid</h3></div><div class="grid grid-cols-1 md:grid-cols-3 gap-6"><div class="rounded-2xl border border-[#27272a] bg-[#121215] p-6 hover:border-zinc-700 transition-all flex flex-col justify-between"><div><div class="w-10 h-10 rounded-lg bg-rust-500/10 border border-rust-500/20 flex items-center justify-center text-rust-400 mb-5"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M13 10V3L4 14h7v7l9-11h-7z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg></div><h4 class="text-lg font-bold text-white mb-2">Parallel Multi-Ecosystem Scanning</h4><p class="text-sm text-zinc-400 leading-relaxed">Queries 5 package registries concurrently via Tokio async runtime with connection pooling and non-blocking I/O.</p></div><div class="mt-6 pt-4 border-t border-[#27272a] text-xs font-mono text-zinc-500 flex items-center justify-between"><span>Runtime</span><span class="text-rust-400 font-semibold">Tokio Async I/O</span></div></div><div class="rounded-2xl border border-[#27272a] bg-[#121215] p-6 hover:border-zinc-700 transition-all flex flex-col justify-between"><div><div class="w-10 h-10 rounded-lg bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-cyanAccent-400 mb-5"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg></div><h4 class="text-lg font-bold text-white mb-2">SemVer Risk Classification</h4><p class="text-sm text-zinc-400 leading-relaxed">Intelligently classifies version jumps into <span class="text-emerald-400 font-mono">● Safe</span>, <span class="text-amber-400 font-mono">● At-Risk</span>, and <span class="text-rose-400 font-mono">● Breaking</span> while filtering unstable pre-releases.</p></div><div class="mt-6 pt-4 border-t border-[#27272a] text-xs font-mono text-zinc-500 flex items-center justify-between"><span>Rules</span><span class="text-cyanAccent-400 font-semibold">Strict SemVer 2.0</span></div></div><div class="rounded-2xl border border-[#27272a] bg-[#121215] p-6 hover:border-zinc-700 transition-all flex flex-col justify-between"><div><div class="w-10 h-10 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 mb-5"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg></div><h4 class="text-lg font-bold text-white mb-2">Standalone Interactive HTML</h4><p class="text-sm text-zinc-400 leading-relaxed">Self-contained ~55KB offline HTML report with zero external CDN dependencies, auto-opens in default browser.</p></div><div class="mt-6 pt-4 border-t border-[#27272a] text-xs font-mono text-zinc-500 flex items-center justify-between"><span>Footprint</span><span class="text-emerald-400 font-semibold">54 KB Standalone</span></div></div></div></div></section>
+<section class="py-20 border-t border-[#27272a] relative scroll-mt-16" id="features">
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+<div class="text-center max-w-3xl mx-auto mb-16">
+<h2 class="text-xs uppercase font-mono tracking-widest text-rust-500 font-semibold mb-2">What ships</h2>
+<h3 class="text-3xl sm:text-4xl font-bold text-white tracking-tight">Dependency intelligence, end to end</h3>
+<p class="mt-3 text-zinc-400 text-sm sm:text-base">One binary discovers every manifest, resolves the registries, classifies each jump, and writes a report you can hand to a teammate or a CI job.</p>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+<!-- 1 -->
+<div class="rounded-2xl border border-[#27272a] bg-[#121215] p-6 hover:border-zinc-700 transition-all flex flex-col justify-between">
+<div>
+<div class="w-10 h-10 rounded-lg bg-rust-500/10 border border-rust-500/20 flex items-center justify-center text-rust-400 mb-5">
+<svg class="w-5 h-5" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M13 10V3L4 14h7v7l9-11h-7z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+</div>
+<h4 class="text-lg font-bold text-white mb-2">Parallel Multi-Ecosystem Scanning</h4>
+<p class="text-sm text-zinc-400 leading-relaxed">Walks a repository tree while honouring <code class="text-zinc-300">.gitignore</code>, parses Cargo, npm, PyPI, Go and Composer manifests, and queries all five registries concurrently through Tokio.</p>
+</div>
+<div class="mt-6 pt-4 border-t border-[#27272a] text-xs font-mono text-zinc-500 flex items-center justify-between"><span>Coverage</span><span class="text-rust-400 font-semibold">5 ecosystems</span></div>
+</div>
+<!-- 2 -->
+<div class="rounded-2xl border border-[#27272a] bg-[#121215] p-6 hover:border-zinc-700 transition-all flex flex-col justify-between">
+<div>
+<div class="w-10 h-10 rounded-lg bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-cyanAccent-400 mb-5">
+<svg class="w-5 h-5" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+</div>
+<h4 class="text-lg font-bold text-white mb-2">SemVer Risk Classification</h4>
+<p class="text-sm text-zinc-400 leading-relaxed">Compares each bump against the declared requirement and labels it <span class="text-emerald-400 font-mono">● Safe</span>, <span class="text-amber-400 font-mono">● At-Risk</span>, <span class="text-rose-400 font-mono">● Breaking</span>, up-to-date, or unknown — with pre-releases filtered out.</p>
+</div>
+<div class="mt-6 pt-4 border-t border-[#27272a] text-xs font-mono text-zinc-500 flex items-center justify-between"><span>Rules</span><span class="text-cyanAccent-400 font-semibold">SemVer 2.0 + declared range</span></div>
+</div>
+<!-- 3 -->
+<div class="rounded-2xl border border-[#27272a] bg-[#121215] p-6 hover:border-zinc-700 transition-all flex flex-col justify-between">
+<div>
+<div class="w-10 h-10 rounded-lg bg-violet-500/10 border border-violet-500/20 flex items-center justify-center text-violet-400 mb-5">
+<svg class="w-5 h-5" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+</div>
+<h4 class="text-lg font-bold text-white mb-2">Per-Library AI Briefings</h4>
+<p class="text-sm text-zinc-400 leading-relaxed">Every outdated package gets its own Markdown analysis: breaking changes, security and CVE context, performance impact, and actionable migration advice — not a generic changelog dump.</p>
+</div>
+<div class="mt-6 pt-4 border-t border-[#27272a] text-xs font-mono text-zinc-500 flex items-center justify-between"><span>Output</span><span class="text-violet-400 font-semibold">4-section briefing</span></div>
+</div>
+<!-- 4 -->
+<div class="rounded-2xl border border-[#27272a] bg-[#121215] p-6 hover:border-zinc-700 transition-all flex flex-col justify-between">
+<div>
+<div class="w-10 h-10 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 mb-5">
+<svg class="w-5 h-5" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M12 3v2.25m6.364.386l-1.591 1.591M21 12h-2.25m-.386 6.364l-1.591-1.591M12 18.75V21m-4.773-4.227l-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+</div>
+<h4 class="text-lg font-bold text-white mb-2">Free Local AI, or Bring Your Key</h4>
+<p class="text-sm text-zinc-400 leading-relaxed">Run summaries entirely on your machine with Ollama, or plug in Gemini, OpenAI, OpenRouter, or any OpenAI-compatible proxy. Keys stay in your config; no telemetry, no shared key, no RustyDeps proxy.</p>
+</div>
+<div class="mt-6 pt-4 border-t border-[#27272a] text-xs font-mono text-zinc-500 flex items-center justify-between"><span>Privacy</span><span class="text-emerald-400 font-semibold">Local-first BYOK</span></div>
+</div>
+<!-- 5 -->
+<div class="rounded-2xl border border-[#27272a] bg-[#121215] p-6 hover:border-zinc-700 transition-all flex flex-col justify-between">
+<div>
+<div class="w-10 h-10 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400 mb-5">
+<svg class="w-5 h-5" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M20.25 6.375c0 2.278-3.694 4.125-8.25 4.125S3.75 8.653 3.75 6.375m16.5 0c0-2.278-3.694-4.125-8.25-4.125S3.75 4.097 3.75 6.375m16.5 0v11.25c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125V6.375m16.5 0v3.75m-16.5-3.75v3.75m16.5 0v3.75C20.25 16.153 16.556 18 12 18s-8.25-1.847-8.25-4.125v-3.75" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+</div>
+<h4 class="text-lg font-bold text-white mb-2">Disk Cache &amp; Circuit Breaker</h4>
+<p class="text-sm text-zinc-400 leading-relaxed">Analyses are cached per ecosystem, package and target version, so repeat scans cost zero tokens. Invalidate with <code class="text-zinc-300">--no-cache</code> or wipe with <code class="text-zinc-300">rustydeps cache clear</code>; auth, quota and model errors stop after the first failure.</p>
+</div>
+<div class="mt-6 pt-4 border-t border-[#27272a] text-xs font-mono text-zinc-500 flex items-center justify-between"><span>Repeat AI</span><span class="text-amber-400 font-semibold">0 tokens</span></div>
+</div>
+<!-- 6 -->
+<div class="rounded-2xl border border-[#27272a] bg-[#121215] p-6 hover:border-zinc-700 transition-all flex flex-col justify-between">
+<div>
+<div class="w-10 h-10 rounded-lg bg-rose-500/10 border border-rose-500/20 flex items-center justify-center text-rose-400 mb-5">
+<svg class="w-5 h-5" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+</div>
+<h4 class="text-lg font-bold text-white mb-2">Self-Contained HTML Report</h4>
+<p class="text-sm text-zinc-400 leading-relaxed">One file with inline CSS and JS: project cards, risk dots, search and risk filters, expandable dependency drawers, copy-ready upgrade commands, and a per-project “Update All”. No CDN, no server.</p>
+</div>
+<div class="mt-6 pt-4 border-t border-[#27272a] text-xs font-mono text-zinc-500 flex items-center justify-between"><span>Dependencies</span><span class="text-rose-400 font-semibold">zero at runtime</span></div>
+</div>
+</div>
+</div>
+</section>
 <!-- END: FeatureHighlightsSection -->
+<!-- BEGIN: AiSection -->
+<section class="py-20 border-t border-[#27272a] bg-[#0c0c0e] scroll-mt-16" id="ai">
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+<div class="grid lg:grid-cols-2 gap-12 items-center">
+<div class="min-w-0">
+<h2 class="text-xs uppercase font-mono tracking-widest text-rust-500 font-semibold mb-2">AI that stays yours</h2>
+<h3 class="text-3xl sm:text-4xl font-bold text-white tracking-tight">Per-library briefings. Free by default.</h3>
+<p class="mt-4 text-zinc-400 leading-relaxed">Ollama runs the model on your hardware, so local summaries need no account, no key, and no network. Prefer a hosted model? Point RustyDeps at your own provider key — the binary calls it directly and caches the result on disk.</p>
+<ul class="mt-6 space-y-3 text-sm text-zinc-300">
+<li class="flex gap-3"><span class="text-emerald-400 font-mono">✔</span><span>Only outdated, registry-resolved packages are analysed — up-to-date drawers show a plain status card.</span></li>
+<li class="flex gap-3"><span class="text-emerald-400 font-mono">✔</span><span>At most four concurrent requests with a 45-second timeout; a failure degrades to the standard changelog link.</span></li>
+<li class="flex gap-3"><span class="text-emerald-400 font-mono">✔</span><span>A one-second Ollama preflight warns once if the daemon is offline; cached briefings are still applied.</span></li>
+<li class="flex gap-3"><span class="text-emerald-400 font-mono">✔</span><span>The report names the model behind a cached briefing, for example <span class="font-mono text-xs bg-[#18181b] border border-[#27272a] rounded px-1.5 py-0.5 text-amber-300">⚡ Cached (llama3.2:3b)</span>.</span></li>
+</ul>
+<div class="mt-6 flex flex-wrap gap-2 font-mono text-xs">
+<span class="px-2.5 py-1 rounded-md bg-[#121215] border border-emerald-500/30 text-emerald-400">Ollama · free</span>
+<span class="px-2.5 py-1 rounded-md bg-[#121215] border border-[#27272a] text-zinc-300">Gemini</span>
+<span class="px-2.5 py-1 rounded-md bg-[#121215] border border-[#27272a] text-zinc-300">OpenAI</span>
+<span class="px-2.5 py-1 rounded-md bg-[#121215] border border-[#27272a] text-zinc-300">OpenRouter</span>
+<span class="px-2.5 py-1 rounded-md bg-[#121215] border border-[#27272a] text-zinc-300">Custom proxy</span>
+</div>
+</div>
+<div class="space-y-4 min-w-0">
+<div class="rounded-xl border border-[#27272a] bg-[#09090b] shadow-2xl overflow-hidden">
+<div class="px-4 py-3 bg-[#121215] border-b border-[#27272a] flex items-center justify-between">
+<span class="text-xs font-mono text-zinc-400">~/.config/rustydeps/config.json</span>
+<button aria-label="Copy Ollama configuration" class="px-2 py-1 rounded-md bg-[#18181b] hover:bg-[#27272a] text-zinc-300 hover:text-white border border-[#27272a] text-[11px] font-mono transition-colors" data-copy='{
+  "ai": {
+    "enabled": true,
+    "provider": "ollama",
+    "model": "llama3.2:3b",
+    "endpoint": "http://localhost:11434/v1"
+  }
+}' onclick="copyFrom(this)">Copy</button>
+</div>
+<pre class="p-5 font-mono text-xs sm:text-sm text-zinc-300 leading-relaxed overflow-x-auto"><code>{
+  "ai": {
+    "enabled": true,
+    "provider": "ollama",
+    "model": "llama3.2:3b",
+    "endpoint": "http://localhost:11434/v1"
+  }
+}</code></pre>
+</div>
+<div class="rounded-xl border border-[#27272a] bg-[#121215] p-4 font-mono text-xs space-y-2">
+<div class="flex items-center justify-between gap-3"><code class="text-zinc-300 break-words min-w-0 flex-1">rustydeps scan . --ai --ai-provider ollama</code><button class="text-zinc-500 hover:text-white shrink-0" data-copy="rustydeps scan . --ai --ai-provider ollama" onclick="copyFrom(this)" aria-label="Copy Ollama scan command">copy</button></div>
+<div class="flex items-center justify-between gap-3"><code class="text-zinc-300 truncate min-w-0 flex-1">rustydeps scan . --no-cache</code><button class="text-zinc-500 hover:text-white shrink-0" data-copy="rustydeps scan . --no-cache" onclick="copyFrom(this)" aria-label="Copy no-cache command">copy</button></div>
+<div class="flex items-center justify-between gap-3"><code class="text-zinc-300 truncate min-w-0 flex-1">rustydeps cache clear</code><button class="text-zinc-500 hover:text-white shrink-0" data-copy="rustydeps cache clear" onclick="copyFrom(this)" aria-label="Copy cache clear command">copy</button></div>
+</div>
+<p class="text-[11px] font-mono text-zinc-500 px-1">Cache: <span class="text-zinc-400">~/.cache/rustydeps/changelogs/</span> · free local model, no key</p>
+</div>
+</div>
+</div>
+</section>
+<!-- END: AiSection -->
 <!-- BEGIN: InteractiveReportShowcase -->
-<section class="py-20 border-t border-[#27272a] bg-[#0c0c0e]" id="preview"><div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8"><div class="text-center max-w-3xl mx-auto mb-12"><h2 class="text-xs uppercase font-mono tracking-widest text-rust-500 font-semibold mb-2">Section 2 • Realistic Execution</h2><h3 class="text-3xl sm:text-4xl font-bold text-white tracking-tight">Terminal &amp; Interactive Report Preview</h3><p class="mt-3 text-zinc-400 text-sm sm:text-base">Run a single CLI command to inspect every dependency across your monorepo and generate a zero-dependency local HTML report.</p></div><div class="space-y-8 max-w-5xl mx-auto"><div class="rounded-xl border border-[#27272a] bg-[#0c0c0e] shadow-2xl overflow-hidden glow-orange"><div class="px-4 py-3 bg-[#121215] border-b border-[#27272a] flex items-center justify-between"><div class="flex items-center space-x-2"><span class="w-3 h-3 rounded-full bg-[#ef4444]/80 inline-block"></span><span class="w-3 h-3 rounded-full bg-[#eab308]/80 inline-block"></span><span class="w-3 h-3 rounded-full bg-[#22c55e]/80 inline-block"></span></div><span class="text-xs font-mono text-zinc-400 font-medium">terminal — rustydeps scan . --report</span><div class="text-[10px] font-mono text-zinc-500">bash / zsh</div></div><div class="p-5 font-mono text-xs sm:text-sm text-zinc-300 leading-relaxed overflow-x-auto space-y-2 bg-[#09090b]"><div class="flex items-center space-x-2 text-zinc-500"><span class="text-rust-500">❯</span><span class="text-white font-semibold">rustydeps</span><span>scan . --report</span></div><div class="text-rust-400 font-bold tracking-wider">🦀 RustyDeps v0.1.0 (Parallel Polyglot SemVer Engine)</div><div class="text-zinc-400">Scanning workspace manifest tree: <span class="text-zinc-200 font-medium">5 projects discovered</span> (Cargo, npm, PyPI, Go, Composer).</div><div class="text-zinc-400">[1/2] Querying upstream registries concurrently via <span class="text-cyanAccent-400">tokio-async-runtime</span>...</div><div class="text-zinc-400">[2/2] Resolving SemVer classifications across 148 packages in <span class="text-white font-bold">1.2s</span>.</div><div class="flex flex-wrap items-center gap-3 pt-2 text-xs"><span class="px-2 py-1 rounded bg-rose-500/10 text-rose-400 border border-rose-500/20 font-medium">● 3 breaking [Major]</span><span class="px-2 py-1 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20 font-medium">● 2 at-risk [Minor]</span><span class="px-2 py-1 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-medium">● 3 safe [Patch]</span></div><div class="pt-2 text-emerald-400 flex items-center space-x-2"><svg class="w-4 h-4 shrink-0" fill="currentColor" viewbox="0 0 20 20"><path clip-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" fill-rule="evenodd"></path></svg><span>Generated self-contained report → <span class="underline decoration-dotted text-zinc-100 font-semibold">./rustydeps-report.html</span> (54.2 KB)</span></div><div class="text-zinc-500 text-xs">✨ Automatically opening default browser window...</div></div></div><div class="rounded-2xl border border-[#27272a] bg-[#09090b] shadow-2xl overflow-hidden font-sans"><div class="px-6 py-4 bg-[#121215] border-b border-[#27272a] flex flex-wrap items-center justify-between gap-4"><div class="flex items-center space-x-3"><span class="w-2.5 h-2.5 rounded-full bg-rust-500"></span><span class="font-bold text-sm tracking-tight text-white">rustydeps-report.html</span><span class="text-[11px] font-mono px-1.5 py-0.5 rounded bg-[#18181b] text-zinc-400 border border-[#27272a]">Standalone</span></div><div class="flex items-center space-x-4 text-xs font-mono"><span class="text-zinc-400"><strong class="text-white">5</strong> projects</span><span class="text-zinc-600">/</span><span class="text-zinc-400"><strong class="text-white">8</strong> packages</span><span class="text-zinc-600">/</span><span class="text-zinc-400">Scanned in <strong class="text-white">1.2s</strong></span></div><div class="flex items-center space-x-3 text-xs font-mono"><span class="flex items-center gap-1.5 text-rose-400"><span class="w-2 h-2 rounded-full bg-rose-500"></span> 3 breaking</span><span class="flex items-center gap-1.5 text-amber-400"><span class="w-2 h-2 rounded-full bg-amber-500"></span> 2 at-risk</span><span class="flex items-center gap-1.5 text-emerald-400"><span class="w-2 h-2 rounded-full bg-emerald-500"></span> 3 safe</span></div></div><div class="p-6 border-b border-[#27272a] space-y-3"><div class="flex items-center justify-between"><div class="flex items-center space-x-2"><span class="text-zinc-500 text-xs">▼</span><span class="px-2 py-0.5 rounded text-[10px] font-mono uppercase bg-[#18181b] text-zinc-400 border border-[#27272a]">CARGO</span><span class="font-bold text-sm text-white">services/backend/Cargo.toml</span></div><div class="flex items-center space-x-3 text-xs font-mono"><span class="text-rose-400">● 1 breaking</span><span class="text-emerald-400">● 1 safe</span></div></div><div class="space-y-1.5 font-mono text-xs"><div class="rounded-lg border border-[#27272a] bg-[#121215] p-3 flex flex-wrap items-center justify-between gap-3"><div class="flex items-center space-x-4 min-w-[200px]"><span class="font-bold text-zinc-100">tokio</span><span class="text-zinc-400">1.35.1 → <span class="text-rose-400 font-bold">2.0.0</span></span><span class="px-2 py-0.5 rounded text-[10px] bg-rose-500/10 text-rose-400 border border-rose-500/20">● major</span></div><div class="flex-1 text-zinc-400 truncate max-w-md hidden md:block"><span class="px-1 py-0.5 rounded bg-zinc-800 text-[10px] text-zinc-300 mr-1.5 font-sans">AI</span>Runtime rewrite: task spawning API requires static lifetime bounds</div><button class="p-1 rounded bg-[#18181b] hover:bg-[#27272a] text-zinc-400 hover:text-white transition-colors" onclick="copyToClipboard('cargo update -p tokio --precise 2.0.0', this)"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg></button></div><div class="rounded-lg border border-[#27272a] bg-[#121215] p-3 flex flex-wrap items-center justify-between gap-3"><div class="flex items-center space-x-4 min-w-[200px]"><span class="font-bold text-zinc-100">axum</span><span class="text-zinc-400">0.7.4 → <span class="text-emerald-400 font-bold">0.7.7</span></span><span class="px-2 py-0.5 rounded text-[10px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">● patch</span></div><div class="flex-1 text-zinc-400 truncate max-w-md hidden md:block"><span class="px-1 py-0.5 rounded bg-zinc-800 text-[10px] text-zinc-300 mr-1.5 font-sans">AI</span>Edge-case fix: HTTP/2 body stream truncation handling under high load</div><button class="p-1 rounded bg-[#18181b] hover:bg-[#27272a] text-zinc-400 hover:text-white transition-colors" onclick="copyToClipboard('cargo update -p axum --precise 0.7.7', this)"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg></button></div></div></div><div class="p-6 space-y-3 bg-[#121215]/20"><div class="flex items-center justify-between"><div class="flex items-center space-x-2"><span class="text-zinc-500 text-xs">▼</span><span class="px-2 py-0.5 rounded text-[10px] font-mono uppercase bg-[#18181b] text-zinc-400 border border-[#27272a]">NPM</span><span class="font-bold text-sm text-white">apps/web/package.json</span></div><div class="flex items-center space-x-3 text-xs font-mono"><span class="text-rose-400">● 2 breaking</span></div></div><div class="space-y-1.5 font-mono text-xs"><div class="rounded-lg border border-[#27272a] bg-[#121215] p-3 flex flex-wrap items-center justify-between gap-3"><div class="flex items-center space-x-4 min-w-[200px]"><span class="font-bold text-zinc-100">@prisma/client</span><span class="text-zinc-400">5.10.0 → <span class="text-rose-400 font-bold">6.0.1</span></span><span class="px-2 py-0.5 rounded text-[10px] bg-rose-500/10 text-rose-400 border border-rose-500/20">● major</span></div><div class="flex-1 text-zinc-400 truncate max-w-md hidden md:block"><span class="px-1 py-0.5 rounded bg-zinc-800 text-[10px] text-zinc-300 mr-1.5 font-sans">AI</span>Dropped Node.js 16/18.11 support; default driver adapters refactored</div><button class="p-1 rounded bg-[#18181b] hover:bg-[#27272a] text-zinc-400 hover:text-white transition-colors" onclick="copyToClipboard('npm install @prisma/client@6.0.1', this)"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg></button></div><div class="rounded-lg border border-[#27272a] bg-[#121215] p-3 flex flex-wrap items-center justify-between gap-3"><div class="flex items-center space-x-4 min-w-[200px]"><span class="font-bold text-zinc-100">tailwindcss</span><span class="text-zinc-400">3.4.1 → <span class="text-rose-400 font-bold">4.0.0</span></span><span class="px-2 py-0.5 rounded text-[10px] bg-rose-500/10 text-rose-400 border border-rose-500/20">● major</span></div><div class="flex-1 text-zinc-400 truncate max-w-md hidden md:block"><span class="px-1 py-0.5 rounded bg-zinc-800 text-[10px] text-zinc-300 mr-1.5 font-sans">AI</span>Engine rewrite (Oxide): CSS-first configuration replaces tailwind.config.js</div><button class="p-1 rounded bg-[#18181b] hover:bg-[#27272a] text-zinc-400 hover:text-white transition-colors" onclick="copyToClipboard('npm install tailwindcss@4.0.0', this)"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg></button></div></div></div></div></div></div></section>
+<section class="py-20 border-t border-[#27272a] scroll-mt-16" id="preview">
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+<div class="text-center max-w-3xl mx-auto mb-12">
+<h2 class="text-xs uppercase font-mono tracking-widest text-rust-500 font-semibold mb-2">Real output</h2>
+<h3 class="text-3xl sm:text-4xl font-bold text-white tracking-tight">Terminal &amp; interactive report</h3>
+<p class="mt-3 text-zinc-400 text-sm sm:text-base">One command inspects every manifest, prints a tally, writes one self-contained report, and opens it. Pass <code class="text-zinc-300">--no-open</code> for CI.</p>
+</div>
+<div class="space-y-8 max-w-5xl mx-auto">
+<!-- Terminal -->
+<div class="rounded-xl border border-[#27272a] bg-[#0c0c0e] shadow-2xl overflow-hidden glow-orange">
+<div class="px-4 py-3 bg-[#121215] border-b border-[#27272a] flex items-center justify-between">
+<div class="flex items-center space-x-2"><span class="w-3 h-3 rounded-full bg-[#ef4444]/80 inline-block"></span><span class="w-3 h-3 rounded-full bg-[#eab308]/80 inline-block"></span><span class="w-3 h-3 rounded-full bg-[#22c55e]/80 inline-block"></span></div>
+<span class="text-xs font-mono text-zinc-400 font-medium">terminal — rustydeps scan .</span>
+<div class="text-[10px] font-mono text-zinc-500">bash / zsh</div>
+</div>
+<div class="p-5 font-mono text-xs sm:text-sm text-zinc-300 leading-relaxed overflow-x-auto space-y-1.5 bg-[#09090b]">
+<div class="flex items-center space-x-2 text-zinc-500"><span class="text-rust-500">❯</span><span class="text-white font-semibold">rustydeps</span><span>scan .</span></div>
+<div class="pt-2 text-rust-400 font-bold tracking-wider">🦀 v0.3.1</div>
+<div class="text-zinc-500">🦀 Smart cross-registry dependency intelligence for Rust, Node, Python, Go &amp; PHP.</div>
+<div class="text-zinc-400">✔ Scanned <span class="text-zinc-200">'services/backend'</span>: 12 dependencies (Cargo)</div>
+<div class="text-zinc-400">✔ Scanned <span class="text-zinc-200">'apps/web'</span>: 34 dependencies (npm)</div>
+<div class="text-zinc-400">✔ Scanned <span class="text-zinc-200">'ml/pipeline'</span>: 18 dependencies (PyPI)</div>
+<div class="text-zinc-400">✔ Scanned <span class="text-zinc-200">'infra'</span>: 9 dependencies (Go)</div>
+<div class="text-zinc-400">✔ Scanned <span class="text-zinc-200">'apps/cms'</span>: 21 dependencies (Composer)</div>
+<div class="pt-3 flex justify-between text-zinc-500"><span>PACKAGE</span><span>ECO · CURRENT → LATEST · UPDATE</span></div>
+<div class="text-zinc-400">axum <span class="text-zinc-600">cargo</span> 0.7.4 → <span class="text-rose-400">0.8.4</span> <span class="text-rose-400">breaking</span></div>
+<div class="text-zinc-400">@prisma/client <span class="text-zinc-600">npm</span> 5.10.0 → <span class="text-rose-400">6.16.2</span> <span class="text-rose-400">breaking</span></div>
+<div class="text-zinc-400">tailwindcss <span class="text-zinc-600">npm</span> 3.4.1 → <span class="text-rose-400">4.1.13</span> <span class="text-rose-400">breaking</span></div>
+<div class="text-zinc-400">requests <span class="text-zinc-600">pypi</span> 2.31.0 → <span class="text-emerald-400">2.32.5</span> <span class="text-emerald-400">safe</span></div>
+<div class="pt-3 text-white font-semibold">94 dependencies: <span class="text-zinc-400">81 up-to-date</span>, <span class="text-emerald-400">3 safe</span>, <span class="text-amber-400">2 at-risk</span>, <span class="text-rose-400">8 breaking</span>, <span class="text-zinc-400">0 unknown</span></div>
+<div class="text-zinc-400">AI analyses: <span class="text-zinc-200">13 package(s)</span>, <span class="text-amber-300">9 served from the local cache</span> (see the HTML report).</div>
+<div class="pt-3 text-emerald-400">HTML report written to rustydeps-report.html</div>
+<div class="text-zinc-500">Open it in your browser: file:///Users/you/repo/rustydeps-report.html</div>
+</div>
+</div>
+<!-- Report preview -->
+<div class="rounded-2xl border border-[#27272a] bg-[#09090b] shadow-2xl overflow-hidden font-sans">
+<div class="px-6 py-4 bg-[#121215] border-b border-[#27272a] flex flex-wrap items-center justify-between gap-4">
+<div class="flex items-center space-x-3">
+<span class="w-2.5 h-2.5 rounded-full bg-rust-500"></span>
+<span class="font-bold text-sm tracking-tight text-white">rustydeps-report.html</span>
+<span class="text-[11px] font-mono px-1.5 py-0.5 rounded bg-[#18181b] text-zinc-400 border border-[#27272a]">Standalone</span>
+</div>
+<div class="flex items-center space-x-4 text-xs font-mono">
+<span class="text-zinc-400"><strong class="text-white">5</strong> projects</span><span class="text-zinc-600">/</span>
+<span class="text-zinc-400"><strong class="text-white">94</strong> packages</span><span class="text-zinc-600">/</span>
+<span class="text-zinc-400">Scanned in <strong class="text-white">1.2s</strong></span>
+</div>
+<div class="flex items-center space-x-3 text-xs font-mono">
+<span class="flex items-center gap-1.5 text-rose-400"><span class="w-2 h-2 rounded-full bg-rose-500"></span> 8 breaking</span>
+<span class="flex items-center gap-1.5 text-amber-400"><span class="w-2 h-2 rounded-full bg-amber-500"></span> 2 at-risk</span>
+<span class="flex items-center gap-1.5 text-emerald-400"><span class="w-2 h-2 rounded-full bg-emerald-500"></span> 3 safe</span>
+</div>
+</div>
+<div class="px-6 py-3 border-b border-[#27272a] flex flex-wrap items-center justify-between gap-3 text-xs font-mono">
+<div class="flex items-center gap-2">
+<span class="px-2 py-1 rounded bg-[#18181b] border border-[#27272a] text-zinc-400">All</span>
+<span class="px-2 py-1 rounded border border-transparent text-rose-400">Breaking</span>
+<span class="px-2 py-1 rounded border border-transparent text-amber-400">At-Risk</span>
+<span class="px-2 py-1 rounded border border-transparent text-emerald-400">Safe</span>
+</div>
+<div class="flex items-center gap-2 text-zinc-500"><span>⌕ Filter packages, manifests, or changelogs…</span><span class="px-1.5 py-0.5 rounded bg-[#18181b] border border-[#27272a] text-[10px] text-zinc-400">/</span></div>
+</div>
+<!-- Project: Cargo -->
+<div class="p-6 border-b border-[#27272a] space-y-3">
+<div class="flex flex-wrap items-center justify-between gap-2">
+<div class="flex items-center space-x-2 min-w-0">
+<span class="text-zinc-500 text-xs">▼</span>
+<span class="px-2 py-0.5 rounded text-[10px] font-mono uppercase bg-[#18181b] text-zinc-400 border border-[#27272a]">CARGO</span>
+<span class="font-bold text-sm text-white break-all">services/backend/Cargo.toml</span>
+</div>
+<div class="flex items-center space-x-3 text-xs font-mono"><span class="text-rose-400">● 1 breaking</span><span class="text-emerald-400">● 1 safe</span></div>
+</div>
+<div class="space-y-1.5 font-mono text-xs">
+<div class="rounded-lg border border-[#27272a] bg-[#121215] p-3 flex flex-wrap items-center justify-between gap-3">
+<div class="flex items-center space-x-4 min-w-[200px]"><span class="font-bold text-zinc-100">axum</span><span class="text-zinc-400">0.7.4 → <span class="text-rose-400 font-bold">0.8.4</span></span><span class="px-2 py-0.5 rounded text-[10px] bg-rose-500/10 text-rose-400 border border-rose-500/20">● breaking</span></div>
+<div class="flex-1 text-zinc-400 truncate max-w-md hidden md:block"><span class="px-1 py-0.5 rounded bg-zinc-800 text-[10px] text-zinc-300 mr-1.5 font-sans">AI</span>Path routing syntax changed; extractors now require explicit state</div>
+<button class="p-1 rounded bg-[#18181b] hover:bg-[#27272a] text-zinc-400 hover:text-white transition-colors" data-copy="cargo update -p axum --precise 0.8.4" onclick="copyFrom(this)" aria-label="Copy axum update command"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg></button>
+</div>
+<div class="rounded-lg border border-[#27272a] bg-[#121215] p-3 flex flex-wrap items-center justify-between gap-3">
+<div class="flex items-center space-x-4 min-w-[200px]"><span class="font-bold text-zinc-100">serde</span><span class="text-zinc-400">1.0.197 → <span class="text-emerald-400 font-bold">1.0.228</span></span><span class="px-2 py-0.5 rounded text-[10px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">● safe</span></div>
+<div class="flex-1 text-zinc-400 truncate max-w-md hidden md:block"><span class="px-1 py-0.5 rounded bg-zinc-800 text-[10px] text-zinc-300 mr-1.5 font-sans">AI</span>Patch release: derive macro edge cases and error messages</div>
+<button class="p-1 rounded bg-[#18181b] hover:bg-[#27272a] text-zinc-400 hover:text-white transition-colors" data-copy="cargo update -p serde --precise 1.0.228" onclick="copyFrom(this)" aria-label="Copy serde update command"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg></button>
+</div>
+</div>
+</div>
+<!-- Project: npm with expanded AI drawer -->
+<div class="p-6 space-y-3 bg-[#121215]/20">
+<div class="flex flex-wrap items-center justify-between gap-2">
+<div class="flex items-center space-x-2 min-w-0">
+<span class="text-zinc-500 text-xs">▼</span>
+<span class="px-2 py-0.5 rounded text-[10px] font-mono uppercase bg-[#18181b] text-zinc-400 border border-[#27272a]">NPM</span>
+<span class="font-bold text-sm text-white break-all">apps/web/package.json</span>
+</div>
+<div class="flex items-center space-x-3 text-xs font-mono"><span class="text-rose-400">● 2 breaking</span></div>
+</div>
+<div class="space-y-1.5 font-mono text-xs">
+<div class="rounded-lg border border-[#27272a] bg-[#121215] p-3 flex flex-wrap items-center justify-between gap-3">
+<div class="flex items-center space-x-4 min-w-[200px]"><span class="font-bold text-zinc-100">@prisma/client</span><span class="text-zinc-400">5.10.0 → <span class="text-rose-400 font-bold">6.16.2</span></span><span class="px-2 py-0.5 rounded text-[10px] bg-rose-500/10 text-rose-400 border border-rose-500/20">● breaking</span></div>
+<div class="flex-1 text-zinc-400 truncate max-w-md hidden md:block"><span class="px-1 py-0.5 rounded bg-zinc-800 text-[10px] text-zinc-300 mr-1.5 font-sans">AI</span>Node.js 16 support dropped; driver adapter defaults refactored</div>
+<button class="p-1 rounded bg-[#18181b] hover:bg-[#27272a] text-zinc-400 hover:text-white transition-colors" data-copy="npm install @prisma/client@6.16.2" onclick="copyFrom(this)" aria-label="Copy prisma update command"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg></button>
+</div>
+<div class="rounded-lg border border-[#27272a] bg-[#121215] p-3 flex flex-wrap items-center justify-between gap-3">
+<div class="flex items-center space-x-4 min-w-[200px]"><span class="font-bold text-zinc-100">tailwindcss</span><span class="text-zinc-400">3.4.1 → <span class="text-rose-400 font-bold">4.1.13</span></span><span class="px-2 py-0.5 rounded text-[10px] bg-rose-500/10 text-rose-400 border border-rose-500/20">● breaking</span></div>
+<div class="flex-1 text-zinc-400 truncate max-w-md hidden md:block"><span class="px-1 py-0.5 rounded bg-zinc-800 text-[10px] text-zinc-300 mr-1.5 font-sans">AI</span>Engine rewrite (Oxide): CSS-first configuration replaces tailwind.config.js</div>
+<button class="p-1 rounded bg-[#18181b] hover:bg-[#27272a] text-zinc-400 hover:text-white transition-colors" data-copy="npm install tailwindcss@4.1.13" onclick="copyFrom(this)" aria-label="Copy tailwind update command"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg></button>
+</div>
+</div>
+<!-- Expanded drawer -->
+<div class="rounded-lg border border-violet-500/30 bg-[#0c0c0e] p-4">
+<div class="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-[#27272a]">
+<div class="flex items-center gap-2">
+<span class="px-1.5 py-0.5 rounded bg-violet-500/10 border border-violet-500/20 text-[10px] font-mono text-violet-300">AI ANALYSIS</span>
+<span class="text-[11px] font-mono px-1.5 py-0.5 rounded bg-[#18181b] border border-amber-500/30 text-amber-300">⚡ Cached (llama3.2:3b)</span>
+</div>
+<div class="flex items-center gap-3 text-[11px] font-mono">
+<a class="text-cyanAccent-400 hover:text-cyanAccent-500" href="https://github.com/AlexDevsTheWeb/rustydeps/releases/tag/v0.3.1" rel="noreferrer" target="_blank">standard changelog ↗</a>
+<button class="px-2 py-1 rounded bg-[#18181b] border border-[#27272a] text-zinc-300 hover:text-white" data-copy="npm install @prisma/client@6.16.2" onclick="copyFrom(this)">copy upgrade</button>
+</div>
+</div>
+<div class="mt-3 grid md:grid-cols-2 gap-x-6 gap-y-3 text-xs font-sans">
+<div><div class="font-mono text-[11px] text-rose-300 mb-1">🚨 Breaking Changes &amp; Deprecations</div><p class="text-zinc-400 leading-relaxed">Node.js 16 and 18.11 are no longer supported; the minimum runtime is Node.js 18.18.</p></div>
+<div><div class="font-mono text-[11px] text-emerald-300 mb-1">🛡️ Security &amp; Vulnerability Context</div><p class="text-zinc-400 leading-relaxed">No CVE is resolved by this jump; review the driver adapter advisory before upgrading.</p></div>
+<div><div class="font-mono text-[11px] text-amber-300 mb-1">⚡ Performance &amp; Architectural Impact</div><p class="text-zinc-400 leading-relaxed">Default driver adapters are now explicit, which changes connection pooling setup.</p></div>
+<div><div class="font-mono text-[11px] text-cyanAccent-400 mb-1">💡 Actionable Migration Advice</div><p class="text-zinc-400 leading-relaxed">Pin the adapter package, run <code class="text-zinc-300">prisma generate</code>, then replay the integration suite.</p></div>
+</div>
+<div class="mt-3 pt-3 border-t border-[#27272a] flex flex-wrap items-center justify-between gap-2 text-[11px] font-mono text-zinc-500">
+<span>Scope: ecosystem + package + target version</span>
+<span class="text-zinc-400">Cached locally · no request this scan</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</section>
 <!-- END: InteractiveReportShowcase -->
-<!-- BEGIN: BenchmarkPerformanceSection -->
-<!-- END: BenchmarkPerformanceSection -->
 <!-- BEGIN: InstallationSection -->
-<section class="py-20 border-t border-[#27272a] bg-[#0c0c0e]/60" id="quickstart"><div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8"><div class="text-center mb-12"><h2 class="text-xs uppercase font-mono tracking-widest text-rust-500 font-semibold mb-2">Section 4 • Quickstart</h2><h3 class="text-3xl font-bold text-white tracking-tight">Get Started in 3 Steps</h3><p class="mt-2 text-zinc-400 text-sm">No runtime baggage or external language interpreters required.</p></div><div class="space-y-4 font-mono text-xs sm:text-sm"><div class="rounded-xl border border-[#27272a] bg-[#121215] p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4"><div class="space-y-1"><div class="text-rust-400 font-semibold text-xs tracking-wider uppercase font-sans">Step 1: Clone &amp; Install</div><div class="text-zinc-200 flex items-center gap-2"><span class="text-rust-500 select-none">$</span><span>cargo install --path .</span></div></div><button class="self-start sm:self-auto shrink-0 px-3 py-1.5 rounded-lg bg-[#18181b] hover:bg-[#27272a] text-zinc-300 hover:text-white border border-[#27272a] text-xs transition-colors flex items-center gap-1.5" onclick="copyToClipboard('cargo install --path .', this)"><span>Copy</span></button></div><div class="rounded-xl border border-[#27272a] bg-[#121215] p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4"><div class="space-y-1"><div class="text-cyanAccent-400 font-semibold text-xs tracking-wider uppercase font-sans">Step 2: Scan Repository</div><div class="text-zinc-200 flex items-center gap-2"><span class="text-rust-500 select-none">$</span><span>rustydeps scan .</span></div></div><button class="self-start sm:self-auto shrink-0 px-3 py-1.5 rounded-lg bg-[#18181b] hover:bg-[#27272a] text-zinc-300 hover:text-white border border-[#27272a] text-xs transition-colors flex items-center gap-1.5" onclick="copyToClipboard('rustydeps scan .', this)"><span>Copy</span></button></div><div class="rounded-xl border border-[#27272a] bg-[#121215] p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4"><div class="space-y-1"><div class="text-emerald-400 font-semibold text-xs tracking-wider uppercase font-sans">Step 3: Auto-Open Report</div><div class="text-zinc-400 text-xs font-sans">Opens self-contained interactive <code class="text-zinc-200 font-mono">rustydeps-report.html</code> directly in your default browser.</div></div><div class="text-xs text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-3 py-1.5 rounded-lg font-mono self-start sm:self-auto">54 KB Standalone</div></div></div><div class="mt-8 flex items-center space-x-2 text-xs font-mono text-zinc-400 bg-[#121215] p-3 rounded-xl border border-[#27272a]"><svg class="w-4 h-4 text-rust-500 shrink-0" fill="currentColor" viewbox="0 0 20 20"><path clip-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" fill-rule="evenodd"></path></svg><span>Tip: RustyDeps returns exit code <code>1</code> on breaking changes for CI/CD pipeline gating.</span></div></div></section>
+<section class="py-20 border-t border-[#27272a] bg-[#0c0c0e]/60 scroll-mt-16" id="quickstart">
+<div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+<div class="text-center mb-12">
+<h2 class="text-xs uppercase font-mono tracking-widest text-rust-500 font-semibold mb-2">Quickstart</h2>
+<h3 class="text-3xl font-bold text-white tracking-tight">From clone to report in three steps</h3>
+<p class="mt-2 text-zinc-400 text-sm">A single Rust binary, or a prebuilt multi-arch Docker image. No language runtime required either way.</p>
+</div>
+<div class="space-y-4 font-mono text-xs sm:text-sm">
+<!-- Step 1: install tabs -->
+<div class="rounded-xl border border-[#27272a] bg-[#121215] p-5">
+<div class="text-rust-400 font-semibold text-xs tracking-wider uppercase font-sans mb-3">Step 1 · Install v0.3.1</div>
+<div class="flex items-center gap-1 mb-4 border-b border-[#27272a]">
+<button class="install-tab-btn px-3 py-2 text-xs font-mono border-b-2 border-rust-500 text-white bg-[#121215] transition-colors" onclick="switchTab('cargo', this)">Cargo</button>
+<button class="install-tab-btn px-3 py-2 text-xs font-mono border-b-2 border-transparent text-zinc-400 hover:text-zinc-200 transition-colors" onclick="switchTab('docker', this)">Docker</button>
+</div>
+<div class="tab-content" id="tab-cargo">
+<div class="flex items-center justify-between gap-3">
+<code class="text-zinc-200 break-words min-w-0 flex-1">cargo install --git https://github.com/AlexDevsTheWeb/rustydeps --tag v0.3.1</code>
+<button class="shrink-0 px-3 py-1.5 rounded-lg bg-[#18181b] hover:bg-[#27272a] text-zinc-300 hover:text-white border border-[#27272a] text-xs transition-colors" data-copy="cargo install --git https://github.com/AlexDevsTheWeb/rustydeps --tag v0.3.1" onclick="copyFrom(this)">Copy</button>
+</div>
+<p class="mt-2 text-[11px] text-zinc-500 font-sans">Installs the tagged release, including the AI summarizer and cache commands.</p>
+</div>
+<div class="tab-content hidden" id="tab-docker">
+<div class="flex items-center justify-between gap-3">
+<code class="text-zinc-200 break-words min-w-0 flex-1">docker run --rm -v /path/to/repo:/workspace ghcr.io/alexdevstheweb/rustydeps:0.3.1</code>
+<button class="shrink-0 px-3 py-1.5 rounded-lg bg-[#18181b] hover:bg-[#27272a] text-zinc-300 hover:text-white border border-[#27272a] text-xs transition-colors" data-copy="docker run --rm -v /path/to/repo:/workspace ghcr.io/alexdevstheweb/rustydeps:0.3.1" onclick="copyFrom(this)">Copy</button>
+</div>
+<p class="mt-2 text-[11px] text-zinc-500 font-sans">Multi-arch Linux image (amd64 + arm64). The report lands in the mounted directory; add <code class="text-zinc-400">--no-open</code> for CI.</p>
+</div>
+</div>
+<!-- Step 2 -->
+<div class="rounded-xl border border-[#27272a] bg-[#121215] p-5">
+<div class="text-cyanAccent-400 font-semibold text-xs tracking-wider uppercase font-sans mb-3">Step 2 · Scan</div>
+<div class="flex items-center justify-between gap-3">
+<code class="text-zinc-200 truncate min-w-0 flex-1">rustydeps scan .</code>
+<button class="shrink-0 px-3 py-1.5 rounded-lg bg-[#18181b] hover:bg-[#27272a] text-zinc-300 hover:text-white border border-[#27272a] text-xs transition-colors" data-copy="rustydeps scan ." onclick="copyFrom(this)">Copy</button>
+</div>
+<div class="mt-3 grid sm:grid-cols-3 gap-2 text-[11px] text-zinc-400">
+<div class="rounded-lg bg-[#09090b] border border-[#27272a] p-2"><code class="text-zinc-300">-o report.html --no-open</code><div class="font-sans mt-1 text-zinc-500">Choose the path, skip the browser</div></div>
+<div class="rounded-lg bg-[#09090b] border border-[#27272a] p-2"><code class="text-zinc-300">--format json</code><div class="font-sans mt-1 text-zinc-500">Machine-readable, banner suppressed</div></div>
+<div class="rounded-lg bg-[#09090b] border border-[#27272a] p-2"><code class="text-zinc-300">--offline</code><div class="font-sans mt-1 text-zinc-500">No registry calls; alias <code class="text-zinc-400">--no-fetch</code></div></div>
+</div>
+</div>
+<!-- Step 3 -->
+<div class="rounded-xl border border-[#27272a] bg-[#121215] p-5">
+<div class="text-emerald-400 font-semibold text-xs tracking-wider uppercase font-sans mb-3">Step 3 · Add AI (optional)</div>
+<div class="flex items-center justify-between gap-3">
+<code class="text-zinc-200 break-words min-w-0 flex-1">rustydeps scan . --ai --ai-provider ollama</code>
+<button class="shrink-0 px-3 py-1.5 rounded-lg bg-[#18181b] hover:bg-[#27272a] text-zinc-300 hover:text-white border border-[#27272a] text-xs transition-colors" data-copy="rustydeps scan . --ai --ai-provider ollama" onclick="copyFrom(this)">Copy</button>
+</div>
+<div class="mt-3 flex flex-wrap gap-2 text-[11px]">
+<span class="px-2 py-1 rounded-md bg-[#09090b] border border-[#27272a] text-zinc-400">BYOK config: <code class="text-zinc-300">~/.config/rustydeps/config.json</code></span>
+<span class="px-2 py-1 rounded-md bg-[#09090b] border border-emerald-500/20 text-emerald-400">Free + offline with Ollama</span>
+<span class="px-2 py-1 rounded-md bg-[#09090b] border border-[#27272a] text-zinc-400"><code class="text-zinc-300">--no-ai</code> always wins</span>
+</div>
+</div>
+</div>
+<div class="mt-8 flex items-start space-x-2 text-xs font-mono text-zinc-400 bg-[#121215] p-3 rounded-xl border border-[#27272a]">
+<svg class="w-4 h-4 text-rust-500 shrink-0 mt-0.5" fill="currentColor" viewbox="0 0 20 20"><path clip-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" fill-rule="evenodd"></path></svg>
+<span class="font-sans">CI recipe: use the Docker image with <code class="font-mono text-zinc-200">scan /workspace --no-open</code> and archive <code class="font-mono text-zinc-200">rustydeps-report.html</code> as a build artifact.</span>
+</div>
+</div>
+</section>
 <!-- END: InstallationSection -->
 <!-- BEGIN: ToastNotification -->
 <div class="fixed bottom-6 right-6 z-50 transform translate-y-20 opacity-0 transition-all duration-300 pointer-events-none" id="toast">
@@ -123,10 +505,34 @@
 </div>
 <!-- END: ToastNotification -->
 <!-- BEGIN: Footer -->
-<footer class="border-t border-[#27272a] bg-[#09090b] py-12"><div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8"><div class="flex flex-col md:flex-row items-center justify-between gap-6"><div class="flex items-center space-x-3 text-center md:text-left"><span class="text-xl">🦀</span><div><div class="font-bold text-white text-sm">RustyDeps</div><div class="text-xs text-zinc-500 font-mono">Built with Rust for resilient, high-speed engineering pipelines.</div></div></div><div class="flex flex-wrap items-center justify-center gap-6 text-xs font-mono text-zinc-400"><a class="hover:text-white transition-colors" href="https://github.com/AlexDevsTheWeb/rustydeps" rel="noreferrer" target="_blank">github.com/AlexDevsTheWeb/rustydeps</a><span class="text-zinc-700">•</span><span class="text-zinc-300">MIT License</span><span class="text-zinc-700">•</span><span class="text-rust-400">Built with Rust 🦀</span></div></div><div class="mt-8 pt-6 border-t border-[#27272a]/60 text-center text-xs text-zinc-500 font-mono">© 2025 AlexDevsTheWeb. Open source under the MIT License.</div></div></footer>
+<footer class="border-t border-[#27272a] bg-[#09090b] py-12">
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+<div class="flex flex-col md:flex-row items-center justify-between gap-6">
+<div class="flex items-center space-x-3 text-center md:text-left">
+<span class="text-xl">🦀</span>
+<div><div class="font-bold text-white text-sm">RustyDeps v0.3.1</div><div class="text-xs text-zinc-500 font-mono">Built with Rust for resilient, high-speed engineering pipelines.</div></div>
+</div>
+<div class="flex flex-wrap items-center justify-center gap-6 text-xs font-mono text-zinc-400">
+<a class="hover:text-white transition-colors" href="https://github.com/AlexDevsTheWeb/rustydeps" rel="noreferrer" target="_blank">github.com/AlexDevsTheWeb/rustydeps</a>
+<span class="text-zinc-700">•</span>
+<a class="hover:text-white transition-colors" href="https://github.com/AlexDevsTheWeb/rustydeps/releases/tag/v0.3.1" rel="noreferrer" target="_blank">Release v0.3.1</a>
+<span class="text-zinc-700">•</span>
+<a class="hover:text-white transition-colors" href="https://github.com/AlexDevsTheWeb/rustydeps/pkgs/container/rustydeps" rel="noreferrer" target="_blank">GHCR image</a>
+<span class="text-zinc-700">•</span>
+<span class="text-zinc-300">MIT OR Apache-2.0</span>
+</div>
+</div>
+<div class="mt-8 pt-6 border-t border-[#27272a]/60 text-center text-xs text-zinc-500 font-mono">© 2025 AlexDevsTheWeb. Open source under MIT OR Apache-2.0.</div>
+</div>
+</footer>
 <!-- END: Footer -->
 <!-- BEGIN: InteractiveHandlersScript -->
 <script data-purpose="interactive-handlers">
+    // Copy the command stored on the clicked element.
+    function copyFrom(buttonElement) {
+      copyToClipboard(buttonElement.getAttribute('data-copy'), buttonElement);
+    }
+
     // Clipboard copy with feedback
     function copyToClipboard(text, buttonElement) {
       navigator.clipboard.writeText(text).then(() => {

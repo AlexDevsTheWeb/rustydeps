@@ -29,6 +29,8 @@ pub struct Summarizer {
     enabled: bool,
     provider: Option<AiProvider>,
     model: Option<String>,
+    /// Bypass cached reads for this run while still writing fresh entries.
+    force_refresh: bool,
     /// Set after a fatal provider error; stops the remaining requests.
     stop: Arc<AtomicBool>,
 }
@@ -66,6 +68,7 @@ impl Summarizer {
                 enabled: false,
                 provider: Some(settings.provider),
                 model: Some(settings.model),
+                force_refresh: settings.force_refresh,
                 stop: Arc::new(AtomicBool::new(false)),
             };
         }
@@ -88,6 +91,7 @@ impl Summarizer {
                     enabled: true,
                     provider: Some(settings.provider),
                     model: Some(settings.model),
+                    force_refresh: settings.force_refresh,
                     stop: Arc::new(AtomicBool::new(false)),
                 }
             }
@@ -102,6 +106,7 @@ impl Summarizer {
                     enabled: false,
                     provider: Some(settings.provider),
                     model: Some(settings.model),
+                    force_refresh: settings.force_refresh,
                     stop: Arc::new(AtomicBool::new(false)),
                 }
             }
@@ -116,6 +121,7 @@ impl Summarizer {
             enabled: false,
             provider: None,
             model: None,
+            force_refresh: false,
             stop: Arc::new(AtomicBool::new(false)),
         }
     }
@@ -134,6 +140,21 @@ impl Summarizer {
     pub async fn summarize_all(&self, dependencies: &mut [ClassifiedDependency]) {
         if !self.is_enabled() {
             return;
+        }
+
+        // A stopped local daemon is a setup problem, not a per-package failure.
+        // Probe once, then let cache lookups run while network calls stay off.
+        if self.provider == Some(AiProvider::Ollama) {
+            if let Some(client) = &self.client {
+                if !client.ollama_ready().await {
+                    self.stop.store(true, Ordering::Relaxed);
+                    let origin = client.ollama_origin();
+                    warn!(
+                        endpoint = %origin,
+                        "Ollama daemon is offline at {origin}. Tip: Run 'ollama serve' or 'brew services start ollama'."
+                    );
+                }
+            }
         }
 
         let tasks = dependencies
@@ -155,11 +176,14 @@ impl Summarizer {
         let ecosystem = dependency.ecosystem;
         let package = dependency.name.as_str();
 
-        if let Some(cached) = self.cache.load(ecosystem, package, &target) {
-            debug!(package, target = %target, "using the cached AI analysis");
-            dependency.ai_summary = Some(cached.summary);
-            dependency.ai_cached = true;
-            return;
+        if !self.force_refresh {
+            if let Some(cached) = self.cache.load(ecosystem, package, &target) {
+                debug!(package, target = %target, "using the cached AI analysis");
+                dependency.ai_model = Some(cached.model.clone());
+                dependency.ai_summary = Some(cached.summary);
+                dependency.ai_cached = true;
+                return;
+            }
         }
 
         let Some(client) = &self.client else {
@@ -176,6 +200,7 @@ impl Summarizer {
         match client.complete(SYSTEM_PROMPT, &user_prompt(&context)).await {
             Ok(summary) if !summary.trim().is_empty() => {
                 dependency.ai_summary = Some(summary.clone());
+                dependency.ai_model = self.model.clone();
                 dependency.ai_cached = false;
 
                 let entry = CachedSummary {
@@ -242,6 +267,7 @@ mod tests {
             manifest_path: PathBuf::from("Cargo.toml"),
             is_dev_dependency: false,
             ai_summary: None,
+            ai_model: None,
             ai_cached: false,
         }
     }
@@ -253,6 +279,7 @@ mod tests {
             enabled: true,
             provider: Some(AiProvider::Openai),
             model: Some("test-model".to_string()),
+            force_refresh: false,
             stop: Arc::new(AtomicBool::new(false)),
         }
     }
@@ -312,6 +339,31 @@ mod tests {
             dependency.ai_summary.as_deref(),
             Some("### 🚨 Breaking Changes\nUse `tokio::runtime`.")
         );
+        assert_eq!(dependency.ai_model.as_deref(), Some("test-model"));
         assert!(dependency.ai_cached);
+    }
+
+    #[tokio::test]
+    async fn force_refresh_ignores_cached_entries() {
+        let directory = tempfile::tempdir().expect("tempdir");
+        let mut summarizer = cache_only_summarizer(directory.path().to_path_buf());
+        summarizer.force_refresh = true;
+        summarizer
+            .cache
+            .store(&CachedSummary {
+                ecosystem: Ecosystem::Cargo,
+                package: "tokio".to_string(),
+                target_version: "2.0.0".to_string(),
+                model: "test-model".to_string(),
+                summary: "stale cached analysis".to_string(),
+                created_at: now_unix_seconds(),
+            })
+            .expect("store cache");
+
+        let mut dependency = dependency(UpdateType::Breaking, Some("2.0.0"));
+        summarizer.analyze(&mut dependency).await;
+
+        assert!(dependency.ai_summary.is_none());
+        assert!(!dependency.ai_cached);
     }
 }
