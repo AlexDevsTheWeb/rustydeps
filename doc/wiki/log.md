@@ -718,3 +718,19 @@ Opened draft PR [#32](https://github.com/AlexDevsTheWeb/rustydeps/pull/32)
 implementation report's merge-request section.
 
 Validation: OKF validator PASSED (0 errors, 0 warnings).
+
+## 2026-11-27 — README aligned with v0.3.1
+
+Applied Worktree 1 of `doc/raw/2026-11-27/2026-11-27-v0.4.0-and-fixes.md` on
+`fix/readme-badges-v0.3.1`.
+
+- `README.md` — banner and shields.io version badge moved from v0.2.0 to
+  v0.3.1; tagged Cargo install (`--tag v0.3.1`); Docker run, Compose, GitLab
+  CI, and GitHub Actions examples use the `0.3.1` GHCR tag; Docker tag note
+  corrected to `0.3.1`, `0.3`, and `latest`; release example commands use
+  `v0.3.1`.
+- New [[readme-version-alignment]] feature page and implementation report.
+
+Validation: OKF validator PASSED (0 errors, 0 warnings); `cargo fmt --all
+--check` clean. Full verification recorded in
+`doc/raw/development-report-20261127T071441Z.md`.

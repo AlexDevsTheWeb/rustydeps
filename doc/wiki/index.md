@@ -6,7 +6,7 @@ status: active
 version: 0.3.2
 license: CC-BY-4.0
 created: 2026-10-14
-updated: 2026-11-26
+updated: 2026-11-27
 tags: [index, rustydeps, llm-wiki]
 ---
 
@@ -48,6 +48,7 @@ and produces an interactive HTML report with optional AI changelog summaries.
 | [[free-local-ai]] | Quota-free Ollama summaries, `--ai-provider`/`--ai-endpoint`, upgrade-only AI requests, a fatal-error circuit breaker, and report drawers that omit the unavailable notice on up-to-date packages; [implementation report](features/free-local-ai/implementation-report.md). |
 | [[v0.3.1-surgical-fixes]] | `cache clear` and `--no-cache`, the 1-second Ollama preflight, cached-model report badges, and wiremock integration tests; [implementation report](features/v0.3.1-surgical-fixes/implementation-report.md). |
 | [[landing-page-v0.3.1]] | GitHub Pages refresh to v0.3.1: real Cargo/Docker installs, AI/Ollama/cache feature grid, terminal and report-drawer previews, plus a corrected CLI banner; [implementation report](features/landing-page-v0.3.1/implementation-report.md). |
+| [[readme-version-alignment]] | README banner, version badge, tagged Cargo install, Docker tags, and release examples aligned with the shipped v0.3.1 release; [implementation report](features/readme-version-alignment/implementation-report.md). |
 
 ## Source documents
 
@@ -88,6 +89,10 @@ and produces an interactive HTML report with optional AI changelog summaries.
   [[v0.3.1-surgical-fixes]].
 - `doc/raw/2026-11-26/2026-11-26-update-landing-page.md` — the v0.3.1 landing
   page refresh brief implemented by [[landing-page-v0.3.1]].
+- `doc/raw/2026-11-27/2026-11-27-v0.4.0-and-fixes.md` — the three-worktree
+  brief; its README-alignment part is implemented by
+  [[readme-version-alignment]]. The AI hardening and changelog-fetcher parts are
+  delivered on their own branches.
 
 ## Conventions
 
