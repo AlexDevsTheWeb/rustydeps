@@ -749,3 +749,49 @@ Packagist. Full record in
 
 Opened draft PR [#35](https://github.com/AlexDevsTheWeb/rustydeps/pull/35)
 (`feat/v0.4.0-real-changelog-fetcher` → `development`).
+## 2026-11-27 — AI multi-package and custom-provider coverage
+
+Applied Worktree 2 of `doc/raw/2026-11-27/2026-11-27-v0.4.0-and-fixes.md` on
+`fix/ai-multi-package-bug-and-custom-provider`.
+
+- `tests/ai_integration_tests.rs` — five simultaneous outdated packages all get
+  their own summary, request, report row, and rendered AI card.
+- `src/config/mod.rs` — the documented `provider: "custom"` JSON keeps its
+  endpoint/key/model; `provider: "openai"` with a custom gateway does too.
+- `src/ai/client.rs` — a custom endpoint receives `Authorization: Bearer …` on
+  `/v1/chat/completions`.
+- New [[ai-multi-package-hardening]] feature page and implementation report.
+
+No production code changed; the reported loss of earlier summaries does not
+reproduce on `development` because each dependency owns a distinct mutable slot
+and each report row derives its own `has_ai_analysis`.
+
+Validation: `cargo fmt --all --check` clean; `cargo clippy --all-targets -- -D
+warnings` clean; `cargo test --lib` 147 passed; `cargo test --test
+ai_integration_tests` 5 passed; OKF validator PASSED (0 errors, 0 warnings).
+Full record in `doc/raw/development-report-20261127T072100Z.md`.
+
+## 2026-11-27 — AI multi-package draft PR opened
+
+Opened draft PR [#34](https://github.com/AlexDevsTheWeb/rustydeps/pull/34)
+(`fix/ai-multi-package-bug-and-custom-provider` → `development`).
+## 2026-11-27 — README aligned with v0.3.1
+
+Applied Worktree 1 of `doc/raw/2026-11-27/2026-11-27-v0.4.0-and-fixes.md` on
+`fix/readme-badges-v0.3.1`.
+
+- `README.md` — banner and shields.io version badge moved from v0.2.0 to
+  v0.3.1; tagged Cargo install (`--tag v0.3.1`); Docker run, Compose, GitLab
+  CI, and GitHub Actions examples use the `0.3.1` GHCR tag; Docker tag note
+  corrected to `0.3.1`, `0.3`, and `latest`; release example commands use
+  `v0.3.1`.
+- New [[readme-version-alignment]] feature page and implementation report.
+
+Validation: OKF validator PASSED (0 errors, 0 warnings); `cargo fmt --all
+--check` clean. Full verification recorded in
+`doc/raw/development-report-20261127T071441Z.md`.
+
+## 2026-11-27 — README-alignment draft PR opened
+
+Opened draft PR [#33](https://github.com/AlexDevsTheWeb/rustydeps/pull/33)
+(`fix/readme-badges-v0.3.1` → `development`).
