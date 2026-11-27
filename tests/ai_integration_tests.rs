@@ -96,7 +96,8 @@ async fn a_rate_limit_response_trips_the_circuit_breaker() {
         .mount(&server)
         .await;
 
-    let summarizer = Summarizer::from_settings(settings(&server, AiProvider::Custom), None);
+    let summarizer =
+        Summarizer::from_settings(settings(&server, AiProvider::Custom), None).without_changelog();
     let mut dependencies: Vec<_> = (0..10)
         .map(|index| dependency(index, UpdateType::Breaking))
         .collect();
@@ -160,7 +161,8 @@ async fn an_offline_ollama_daemon_skips_every_chat_request() {
         .mount(&server)
         .await;
 
-    let summarizer = Summarizer::from_settings(settings(&server, AiProvider::Ollama), None);
+    let summarizer =
+        Summarizer::from_settings(settings(&server, AiProvider::Ollama), None).without_changelog();
     let mut dependencies: Vec<_> = (0..3)
         .map(|index| dependency(index, UpdateType::Safe))
         .collect();
@@ -178,4 +180,61 @@ async fn an_offline_ollama_daemon_skips_every_chat_request() {
         .count();
     assert_eq!(chat_requests, 0, "an offline daemon must skip chat calls");
     assert_eq!(requests.len(), 1, "only the /api/tags probe should run");
+}
+
+#[tokio::test]
+async fn every_outdated_package_gets_a_summary_and_its_own_report_card() {
+    let server = MockServer::start().await;
+    Mock::given(method("POST"))
+        .and(path("/v1/chat/completions"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(completion_body(
+            "### 🚨 Breaking Changes\nUse `new_api` instead.",
+        )))
+        .mount(&server)
+        .await;
+
+    let summarizer = Summarizer::from_settings(settings(&server, AiProvider::Custom), None);
+    let mut dependencies: Vec<_> = (0..5)
+        .map(|index| dependency(index, UpdateType::Breaking))
+        .collect();
+
+    summarizer.summarize_all(&mut dependencies).await;
+
+    assert!(
+        dependencies
+            .iter()
+            .all(|dependency| dependency.ai_summary.is_some()),
+        "every outdated package must receive a summary"
+    );
+    assert_eq!(
+        server.received_requests().await.expect("requests").len(),
+        dependencies.len(),
+        "one provider request per outdated package"
+    );
+
+    let report = rustydeps::report::ReportData::from_classified(
+        &dependencies,
+        &rustydeps::report::ReportMeta {
+            ai_enabled: true,
+            ..rustydeps::report::ReportMeta::default()
+        },
+    );
+    assert!(
+        report.projects[0]
+            .dependencies
+            .iter()
+            .all(|row| row.has_ai_analysis),
+        "every row must carry its AI analysis"
+    );
+
+    let html = report.render_html().expect("render report");
+    assert_eq!(
+        html.matches("class=\"ai-analysis\"").count(),
+        dependencies.len(),
+        "one rendered AI card per outdated package"
+    );
+    assert_eq!(
+        html.matches("AI Library Release Analysis").count(),
+        dependencies.len()
+    );
 }

@@ -3,10 +3,10 @@ title: "RustyDeps — Roadmap"
 type: roadmap
 description: "Six delivery phases from Rust setup to multi-ecosystem expansion."
 status: active
-version: 0.3.0
+version: 0.4.0
 license: CC-BY-4.0
 created: 2026-10-14
-updated: 2026-10-19
+updated: 2026-11-27
 tags: [roadmap, phases, planning]
 ---
 
@@ -14,7 +14,8 @@ tags: [roadmap, phases, planning]
 
 RustyDeps ships in six incremental phases. Each phase leaves the tool in a
 usable state and maps to modules described in [[architecture]]. All six phases
-are complete; Milestone 0.3.0 delivered the per-library AI summarizer.
+are complete; Milestone 0.3.0 delivered the per-library AI summarizer and
+Milestone 0.4.0 grounds it in official release notes.
 
 ## Phase status
 
@@ -88,6 +89,18 @@ drawer renders the analysis as safe Markdown, with a cache badge and a standard
 changelog link. Exit criteria met: AI is optional, bounded to four concurrent
 requests with a 10-second timeout, and every failure leaves the scan and report
 intact. See [[ai-changelog-summarizer]].
+
+## Milestone 0.4.0 — Real Registry Changelogs ✅
+
+Implemented `doc/raw/2026-11-27/2026-11-27-v0.4.0-and-fixes.md` (Worktree 3).
+Before each AI request that misses the cache, `ChangelogFetcher` resolves the
+package repository from crates.io, npm, PyPI, Packagist, or a GitHub Go module
+path, fetches the matching GitHub release (exact and `v`-toggled tags), and
+injects a sanitized 1,500-character excerpt as the prompt's primary source.
+Missing metadata, unknown tags, rate limits, and timeouts fall back to the
+previous prompt. `GITHUB_TOKEN`/`GH_TOKEN` raises the API limit; `--offline`
+skips lookups; cache format 2 regenerates v0.3.x entries once. See
+[[v0.4.0-changelog-fetcher]].
 
 ## Related
 
