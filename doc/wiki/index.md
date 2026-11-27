@@ -48,6 +48,7 @@ and produces an interactive HTML report with optional AI changelog summaries.
 | [[ai-multi-package-hardening]] | Regression coverage proving five simultaneous outdated packages each get a summary and report card, plus custom endpoint/bearer-key verification for `custom` and `openai` providers; [implementation report](features/ai-multi-package-hardening/implementation-report.md). |
 | [[free-local-ai]] | Quota-free Ollama summaries, `--ai-provider`/`--ai-endpoint`, upgrade-only AI requests, a fatal-error circuit breaker, and report drawers that omit the unavailable notice on up-to-date packages; [implementation report](features/free-local-ai/implementation-report.md). |
 | [[v0.4.0-changelog-fetcher]] | Official GitHub release notes resolved from crates.io, npm, PyPI, Packagist, and Go metadata, bounded to 1,500 characters and injected into the AI prompt; cache format 2; [implementation report](features/v0.4.0-changelog-fetcher/implementation-report.md). |
+| [[v0.4.0-docs-sync]] | README and GitHub Pages moved to v0.4.0: grounded-briefing messaging, `GITHUB_TOKEN` guidance, cache format 2, `--offline` scope, and `0.4.0` GHCR install commands; [implementation report](features/v0.4.0-docs-sync/implementation-report.md). |
 | [[v0.3.1-surgical-fixes]] | `cache clear` and `--no-cache`, the 1-second Ollama preflight, cached-model report badges, and wiremock integration tests; [implementation report](features/v0.3.1-surgical-fixes/implementation-report.md). |
 | [[landing-page-v0.3.1]] | GitHub Pages refresh to v0.3.1: real Cargo/Docker installs, AI/Ollama/cache feature grid, terminal and report-drawer previews, plus a corrected CLI banner; [implementation report](features/landing-page-v0.3.1/implementation-report.md). |
 | [[readme-version-alignment]] | README banner, version badge, tagged Cargo install, Docker tags, and release examples aligned with the shipped v0.3.1 release; [implementation report](features/readme-version-alignment/implementation-report.md). |
@@ -91,6 +92,8 @@ and produces an interactive HTML report with optional AI changelog summaries.
   [[v0.3.1-surgical-fixes]].
 - `doc/raw/2026-11-26/2026-11-26-update-landing-page.md` — the v0.3.1 landing
   page refresh brief implemented by [[landing-page-v0.3.1]].
+- `doc/raw/2026-11-27/2026-11-27-v0.4.0.md` — the README/landing-page v0.4.0
+  sync brief implemented by [[v0.4.0-docs-sync]].
 - `doc/raw/2026-11-27/2026-11-27-v0.4.0-and-fixes.md` — the three-worktree
   brief; its v0.4.0 release-note grounding part is implemented by
   [[v0.4.0-changelog-fetcher]]. The README alignment and AI hardening parts are
