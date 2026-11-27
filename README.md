@@ -1,5 +1,5 @@
 ```
- █▀█ █  █ █▀▀ ▀█▀ █  █ █▀▄ █▀▀ █▀█ █▀    v0.3.1
+ █▀█ █  █ █▀▀ ▀█▀ █  █ █▀▄ █▀▀ █▀█ █▀    v0.4.0
  █▀▄ █▄▄█ ▄██  █  ▀▄▄█ █▄▀ ██▄ █▀▀ ▄█
 ```
 
@@ -7,7 +7,7 @@
 
 [![Release](https://github.com/AlexDevsTheWeb/rustydeps/actions/workflows/release.yml/badge.svg)](https://github.com/AlexDevsTheWeb/rustydeps/actions/workflows/release.yml)
 [![Docker](https://github.com/AlexDevsTheWeb/rustydeps/actions/workflows/docker.yml/badge.svg)](https://github.com/AlexDevsTheWeb/rustydeps/actions/workflows/docker.yml)
-![Version](https://img.shields.io/badge/version-0.3.1-ea580c)
+![Version](https://img.shields.io/badge/version-0.4.0-ea580c)
 ![License](https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-blue)
 ![Rust](https://img.shields.io/badge/rust-1.88%2B-ea580c)
 
@@ -46,7 +46,7 @@ Each update is classified as one of:
 
 ```bash
 # Install from source via cargo
-cargo install --git https://github.com/AlexDevsTheWeb/rustydeps --tag v0.3.1
+cargo install --git https://github.com/AlexDevsTheWeb/rustydeps --tag v0.4.0
 
 # Or clone and build a release binary
 git clone https://github.com/AlexDevsTheWeb/rustydeps
@@ -75,29 +75,32 @@ Container Registry. It bundles the prebuilt binary, so a CI job needs neither a
 Rust toolchain nor a compile step:
 
 ```bash
+# Pull the published v0.4.0 image (GHCR tags omit the git tag's `v`)
+docker pull ghcr.io/alexdevstheweb/rustydeps:0.4.0
+
 # Pull the latest release and scan the current directory
 docker run --rm -v "$PWD:/workspace" ghcr.io/alexdevstheweb/rustydeps:latest
 
 # The report is written into the mounted directory
-docker run --rm -v "$PWD:/workspace" ghcr.io/alexdevstheweb/rustydeps:0.3.1 \
+docker run --rm -v "$PWD:/workspace" ghcr.io/alexdevstheweb/rustydeps:0.4.0 \
   scan /workspace --no-open -o /workspace/rustydeps-report.html
 
 # Pin a version and skip registry lookups entirely
-docker run --rm -v "$PWD:/workspace" ghcr.io/alexdevstheweb/rustydeps:0.3.1 \
+docker run --rm -v "$PWD:/workspace" ghcr.io/alexdevstheweb/rustydeps:0.4.0 \
   scan /workspace --offline --no-open
 ```
 
 `/workspace` is the image's working directory, so `docker run --rm -v
 "$PWD:/workspace" ghcr.io/alexdevstheweb/rustydeps` on its own is equivalent to
 `rustydeps scan .` with the report landing beside your manifests. Image tags
-mirror the release tags (`0.3.1`, `0.3`) plus `latest` for the default branch.
+mirror the release tags (`0.4.0`, `0.4`) plus `latest` for the default branch.
 
 ### CI usage
 
 ```yaml
 # GitLab CI — the Alpine-based image ships `sh`, which job images require
 rustydeps:
-  image: ghcr.io/alexdevstheweb/rustydeps:0.3.1
+  image: ghcr.io/alexdevstheweb/rustydeps:0.4.0
   script:
     - rustydeps scan . --no-open -o rustydeps-report.html
   artifacts:
@@ -106,7 +109,7 @@ rustydeps:
 
 ```yaml
 # GitHub Actions
-- uses: docker://ghcr.io/alexdevstheweb/rustydeps:0.3.1
+- uses: docker://ghcr.io/alexdevstheweb/rustydeps:0.4.0
   with:
     args: scan . --no-open
 ```
@@ -128,8 +131,10 @@ Notes:
 
 - **Auto-open report** — after `scan` writes the HTML report, it opens in your default
   browser. Suppress it with `--no-open` (handy for CI or headless runs).
-- **Offline mode** — `--offline` (alias `--no-fetch`) skips all registry lookups and
-  classifies from the local manifests only; nothing leaves your machine.
+- **Offline mode** — `--offline` (alias `--no-fetch`) skips registry version
+  lookups and official release-note fetching, so it never contacts a registry or
+  GitHub, and classifies from the local manifests only. Cached AI briefings still
+  apply; add `--no-ai` to suppress provider calls for a fully hermetic run.
 - **JSON output** — `--format json` emits the classified result set for tooling and
   suppresses the banner so stdout stays clean.
 - **Self-contained HTML report** — one file with inline CSS/JS: project-centric cards,
@@ -138,10 +143,10 @@ Notes:
 - **Granular per-library AI analysis** — with BYOK configuration, every outdated
   package gets its own Markdown briefing (breaking changes, security context,
   performance impact, migration advice) inside the report drawer. Official GitHub
-  release notes are fetched when available and used as the prompt's primary
-  source; analyses are cached per ecosystem + package + target version, so repeat
-  scans cost nothing. Enable it with `ai.enabled` in the config or `--ai`;
-  `--no-ai` disables it.
+  release notes are resolved from crates.io, npm, PyPI, Packagist, or Go module
+  metadata when available and used as the prompt's primary source; analyses are
+  cached per ecosystem + package + target version, so repeat scans cost nothing.
+  Enable it with `ai.enabled` in the config or `--ai`; `--no-ai` disables it.
 - **Concurrent, polite registry access** — bounded concurrency (10 in flight) with graceful
   degradation: a failed lookup is recorded as `unknown` and never aborts the scan.
 - **`--verbose` / `-v`** — debug-level logging to stderr.
@@ -164,7 +169,7 @@ Options:
       --no-cache        Ignore cached AI analyses and regenerate them
   -o, --output <PATH>   Report output path (default: rustydeps-report.html)
       --format <FORMAT> html | json (default: html)
-      --offline         Skip registry lookups (alias: --no-fetch)
+      --offline         Skip registry lookups and release-note fetching (alias: --no-fetch)
       --no-open         Do not open the generated report in the browser
   -v, --verbose         Verbose (debug) logging
   -h, --help            Print help
@@ -190,8 +195,9 @@ on disk.
   `rustydeps cache clear` to delete every entry (it prints
   `✔ Cleared X cached AI changelog entries.`), or pass `--no-cache` to ignore
   cached reads for one scan and regenerate every analysis; fresh results still
-  refresh the cache. The report badge names the model that produced a cached
-  entry, for example `⚡ Cached (llama3.2:3b)`.
+  refresh the cache. Entries carry `CACHE_FORMAT_VERSION = 2`; older entries are
+  treated as misses and regenerated once. The report badge names the model that
+  produced a cached entry, for example `⚡ Cached (llama3.2:3b)`.
 - **Request scope:** only outdated, registry-resolved packages are analyzed, at
   most four concurrently, with a 45-second timeout per request. The generated
   Markdown appears in the package drawer; every failure degrades gracefully to
@@ -237,9 +243,10 @@ all fall back to the original knowledge-based prompt.
 
 Set `GITHUB_TOKEN` (or `GH_TOKEN`) to raise the GitHub API limit from 60 to
 5,000 requests per hour; a large scan can otherwise exhaust the anonymous
-budget. `--offline` skips release-note lookups as well. Cached summaries are
-versioned: v0.3.x entries are ignored and regenerated once so they can pick up
-the new grounding.
+budget. `--offline` skips release-note lookups as well. Cached summaries carry
+`CACHE_FORMAT_VERSION = 2`; v0.3.x entries are ignored and regenerated once so
+they can pick up the new grounding. Run `rustydeps cache clear` to remove every
+entry.
 
 ### Copy-paste configuration
 
@@ -362,7 +369,7 @@ name without enabling debug logging.
 
 ## Releasing
 
-Pushing a tag matching `v*` (for example `v0.3.1`) triggers the
+Pushing a tag matching `v*` (for example `v0.4.0`) triggers the
 [release workflow](.github/workflows/release.yml), which builds binaries for Linux
 (`x86_64-unknown-linux-gnu`) and macOS (`x86_64-apple-darwin`, `aarch64-apple-darwin`),
 then attaches them (with checksums and a changelog summary) to the GitHub Release.
@@ -371,8 +378,8 @@ which publishes the multi-arch image to `ghcr.io/alexdevstheweb/rustydeps`
 tagged with the release version (see [Docker](#docker)).
 
 ```bash
-git tag v0.3.1
-git push origin v0.3.1
+git tag v0.4.0
+git push origin v0.4.0
 ```
 
 ## Development
